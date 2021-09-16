@@ -9,7 +9,7 @@
 	
 	<title>
 	
-		categories | 
+		page | 
 	 
 	ZeroP
 	</title>
@@ -144,7 +144,7 @@ var _hmt = _hmt || [];
 									</a>
 									
 							<ul>
-								<li class="file">
+								<li class="file active">
 									<a href="/ZeroP/2021/09/16/WEB%E5%AE%89%E5%85%A8/%E6%B3%A8%E5%85%A5%E6%94%BB%E5%87%BB/SQL%E6%B3%A8%E5%85%A5/00%20SQL%E6%B3%A8%E5%85%A5%E5%AF%BC%E8%AE%BA/">
 										00 SQL注入导论
 									</a>
@@ -180,18 +180,83 @@ var _hmt = _hmt || [];
 	<!-- 引入正文 -->
 	<div id="content">
 		<h1 id="article-title">
-	<i class="fa fa-folder-open" aria-hidden="true"></i>分类
-</h1>
-<h2 id="article-title">
-	目前共计 0 个分类
-</h2>
 
-<div id="article-content">
-	<ul>
-      
-	</ul>
+	00 SQL注入导论
+</h1>
+<div class="article-meta">
+	
+	<span>ZeroP零点</span>
+	<span>2021-09-16 10:32:07</span>
+		<div id="article-categories">
+    
+		<span>Categories：</span>
+            
+    
+
+    
+		<span>Tags：</span>
+            
+    
+		</div>
+
 </div>
 
+<div id="article-content">
+	<h2 id="注入背景">注入背景</h2>
+<h3 id="原理">原理</h3>
+<p>Web应用程序对用户输入的数据校验处理不严或者根本没有校验，致使用户可以拼接执行SQL命令。可能导致数据泄露或数据破坏，缺乏可审计性，甚至导致完全接管主机。</p>
+<h3 id="注入类型">注入类型</h3>
+<blockquote>
+<p>布尔盲注：根据返回页面类型条件判断真假</p>
+<p>时间盲注：用页面返回时间是否增加判断是否存在时间型盲注</p>
+<p>错误注入：页面会返回错误信息（一般能报出物理路径）</p>
+<p>联合查询注入：可以使用union的情况下可以使用联合注入</p>
+<p>堆查询注入：可以同时执行多条语句</p>
+</blockquote>
+<h3 id="防御方法">防御方法</h3>
+<p>使用参数化查询</p>
+<p>目前市面上主流的框架基本都会有预处理SQL语句，都是在数据库完成 <code>SQL</code>指令的编译后才会套用参数，避免了参数中的恶意代码在数据库中执行</p>
+
+</div>
+
+
+    <div class="post-guide">
+        <div class="item left">
+            
+        </div>
+        <div class="item right">
+            
+              <a href="/ZeroP/2021/09/16/WEB%E5%AE%89%E5%85%A8/%E6%B3%A8%E5%85%A5%E6%94%BB%E5%87%BB/SQL%E6%B3%A8%E5%85%A5/01%20MySQL%E6%B3%A8%E5%85%A5/">
+                01 MySQL注入
+                <i class="fa fa-angle-right" aria-hidden="true"></i>
+              </a>
+            
+        </div>
+    </div>
+
+
+
+	<div id="vcomments"></div>
+
+
+<script>
+	
+		// 评论
+		new Valine({
+			av: AV,
+			el: '#vcomments',
+			notify: false,
+			verify: false,
+			path: window.location.pathname,
+			appId: '',
+			appKey: '',
+			placeholder: '请输入评论',
+			avatar: 'retro',
+			recordIP: false
+		})
+	
+	
+</script>
 	</div>
 	<div id="footer">
 	<p>

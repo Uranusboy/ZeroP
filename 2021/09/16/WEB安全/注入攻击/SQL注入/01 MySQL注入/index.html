@@ -9,7 +9,7 @@
 	
 	<title>
 	
-		categories | 
+		MySQL注入 | 
 	 
 	ZeroP
 	</title>
@@ -153,7 +153,7 @@ var _hmt = _hmt || [];
 							</ul>
 			
 							<ul>
-								<li class="file">
+								<li class="file active">
 									<a href="/ZeroP/2021/09/16/WEB%E5%AE%89%E5%85%A8/%E6%B3%A8%E5%85%A5%E6%94%BB%E5%87%BB/SQL%E6%B3%A8%E5%85%A5/01%20MySQL%E6%B3%A8%E5%85%A5/">
 										01 MySQL注入
 									</a>
@@ -180,18 +180,159 @@ var _hmt = _hmt || [];
 	<!-- 引入正文 -->
 	<div id="content">
 		<h1 id="article-title">
-	<i class="fa fa-folder-open" aria-hidden="true"></i>分类
-</h1>
-<h2 id="article-title">
-	目前共计 0 个分类
-</h2>
 
-<div id="article-content">
-	<ul>
-      
-	</ul>
+	01 MySQL注入
+</h1>
+<div class="article-meta">
+	
+	<span>ZeroP零点</span>
+	<span>2021-09-16 10:22:44</span>
+		<div id="article-categories">
+    
+		<span>Categories：</span>
+            
+    
+
+    
+		<span>Tags：</span>
+            
+    
+		</div>
+
 </div>
 
+<div id="article-content">
+	<h2 id="MySQL基础知识">MySQL基础知识</h2>
+<h3 id="版本区别">版本区别</h3>
+<p>​	5.0.0版本以下</p>
+<blockquote>
+<p>应为没有information_schema这个数据库，导致所有的信息查询需要全部使用爆破，但是现在基本见不到如此老的数据库</p>
+</blockquote>
+<p>​	5.0.0版本以上</p>
+<blockquote>
+<ul>
+<li>存在information_schema数据库，里面包含了表和所有字段见图1-1-1</li>
+<li>在版本5.4.0以下secure_file_priv默认为空，允许文件的打开写入，版本5.4.0以上secure_file_priv可以为空、null、/temp/（指定目录），当为null时不允许操作文件</li>
+</ul>
+</blockquote>
+<p><img src="C:%5CUsers%5C%E9%9B%B6%E7%82%B9%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5C1631760035958.png" alt="1631760035958"></p>
+<center>[图1-1-1]</center>
+<h3 id="常用函数">常用函数</h3>
+<p>注！：</p>
+<blockquote>
+<p>一个@表示用户变量，两个@表示系统变量</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>database()</th>
+<th>数据库名</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>user()</td>
+<td>当前登录用户名</td>
+</tr>
+<tr>
+<td>updatexml()</td>
+<td>更新xml文档，通常用作报错注入</td>
+</tr>
+<tr>
+<td>mid()</td>
+<td>从指定字段中提取字段内容</td>
+</tr>
+<tr>
+<td>limit()</td>
+<td>指定提取返回结果中的前几条数据</td>
+</tr>
+<tr>
+<td>concat()</td>
+<td>返回参数的字符串</td>
+</tr>
+<tr>
+<td>group_concat()</td>
+<td>分组拼接数据，可以一次性将所有表名列出</td>
+</tr>
+<tr>
+<td>count()</td>
+<td>返回指定参数的数目</td>
+</tr>
+<tr>
+<td>rand()</td>
+<td>参数0~1个随机数</td>
+</tr>
+<tr>
+<td>substr()</td>
+<td>截取字符串</td>
+</tr>
+<tr>
+<td>length()</td>
+<td>返回字符串长度，一般用在布尔盲注</td>
+</tr>
+<tr>
+<td>ascii()</td>
+<td>返回字符串的ascii码</td>
+</tr>
+<tr>
+<td>left()</td>
+<td>返回字符串最左边指定个数的字符</td>
+</tr>
+<tr>
+<td>sleep()</td>
+<td>延时函数，用于时间盲注</td>
+</tr>
+</tbody>
+</table>
+<h4 id="等价函数绕过">等价函数绕过</h4>
+<blockquote>
+<p>group_concat()==&gt;concat_ws()</p>
+<p>sleep()==&gt;benchmark()</p>
+<p>mid()、substr()==&gt;substring()</p>
+<p>user()==&gt;@@user</p>
+<p>updatexml()==&gt;extractivalue()</p>
+</blockquote>
+
+</div>
+
+
+    <div class="post-guide">
+        <div class="item left">
+            
+              <a href="/ZeroP/2021/09/16/WEB%E5%AE%89%E5%85%A8/%E6%B3%A8%E5%85%A5%E6%94%BB%E5%87%BB/SQL%E6%B3%A8%E5%85%A5/00%20SQL%E6%B3%A8%E5%85%A5%E5%AF%BC%E8%AE%BA/">
+                  <i class="fa fa-angle-left" aria-hidden="true"></i>
+                  00 SQL注入导论
+              </a>
+            
+        </div>
+        <div class="item right">
+            
+        </div>
+    </div>
+
+
+
+	<div id="vcomments"></div>
+
+
+<script>
+	
+		// 评论
+		new Valine({
+			av: AV,
+			el: '#vcomments',
+			notify: false,
+			verify: false,
+			path: window.location.pathname,
+			appId: '',
+			appKey: '',
+			placeholder: '请输入评论',
+			avatar: 'retro',
+			recordIP: false
+		})
+	
+	
+</script>
 	</div>
 	<div id="footer">
 	<p>
